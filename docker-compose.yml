@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - pocketblock_rede
+
+  letsencrypt:
+    image: nginxproxy/acme-companion
+    container_name: letsencrypt
+    restart: always
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx
+      - DEFAULT_EMAIL=pocketblock@pocketblock.io
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    networks:
+      - pocketblock_rede
+
+  pocketblock_app:
+    build: .
+    image: pocketblock-web
+    container_name: pocketblock_app
+    restart: always
+    env_file: .env
+    expose:
+      - "5000"
+    depends_on:
+      - mongo
+    volumes:
+      - .:/app
+    networks:
+      - pocketblock_rede
+    environment:
+      - VIRTUAL_HOST=pocketblock.io
+      - VIRTUAL_PORT=5000
+      - LETSENCRYPT_HOST=pocketblock.io
+      - LETSENCRYPT_EMAIL=pocketblock@pocketblock.io
+    command: gunicorn main:app --workers=4 --bind=0.0.0.0:5000 --access-logfile=- --error-logfile=-
+
+  mongo:
+    image: mongo:latest
+    container_name: pocketblock_mongo_db
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: otavioviniciusbacovisadmin
+      MONGO_INITDB_ROOT_PASSWORD: bacovis2812
+    networks:
+      - pocketblock_rede
+
+volumes:
+  mongo_data:
+  nginx_certs:
+  nginx_vhost:
+  nginx_html:
+
+networks:
+  pocketblock_rede:
