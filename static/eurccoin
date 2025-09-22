@@ -1,0 +1,26 @@
+<svg id="usd-icon" class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+    <!-- Fundo da moeda -->
+    <circle cx="50" cy="30" r="28" fill="#ffc107" />
+    
+    <!-- Detalhes internos da moeda -->
+    <circle cx="50" cy="30" r="25" fill="#cc9a06" />
+    <circle cx="50" cy="30" r="20" fill="#ffc107" />
+
+    <!-- Simbolo EURC -->
+    <text x="48" y="32" font-family="Arial, sans-serif" font-size="50" fill="#8B8000" text-anchor="middle" dominant-baseline="middle" font-weight="bold">€</text>
+
+    <!-- Texto EURC -->
+    <text x="50" y="42" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" dominant-baseline="hanging" font-weight="bold">EURC</text>
+    
+    <!-- Gradientes -->
+    <defs>
+        <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#0070FF;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#005BB5;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ffc107;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+</svg>
