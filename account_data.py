@@ -1,27 +1,50 @@
+# ========================
+# Imports and Dependencies
+# ========================
+
+# Module for reading from and writing to CSV files
 import csv
+
+# Module for interacting with the operating system (e.g., environment variables, file paths)
 import os
+
+# Function from Flask to render HTML templates
 from flask import render_template
+
+# Stellar SDK components for accessing the network and submitting transactions
 from stellar_sdk import Network, Server
+
+# Loads environment variables from a .env file into the environment
 from dotenv import load_dotenv
+
+# MongoDB client for accessing and interacting with a MongoDB database
+from pymongo import MongoClient
+
+# Module from the cryptography package for symmetric encryption and decryption
+from cryptography.fernet import Fernet
+
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Connecting to MongoDB using the URI defined in environment variables
+MONGODB_URI = os.getenv("MONGODB_URI")
+if not MONGODB_URI:
+    raise ValueError("Error: MONGODB_URI is not defined in the .env file")
+
+# 
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
+# Initializing the MongoDB client using the MongoDB URI with TLS encryption enabled
+client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
+data_db = client["datapocketblock"]
+wallet_data_collection = data_db["wallet_data"]
+
+fernet = Fernet(ENCRYPTION_KEY.encode())
+
 # Get network type and Horizon server URL from environment variables
 GLOBAL_NETWORK = os.getenv("GLOBAL_NETWORK", "mainnet")
 HORIZON_URL = os.getenv("SERVER_URL") # Server url
-
-def generate_buttons():
-    """
-    Generates HTML buttons for closing, copying, and sharing a notification.
-    
-    :return: HTML string with buttons
-    """
-    return (
-        f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-        f"<button id='copyBtn' onclick='copyToClipboard()'><i class='fas fa-copy'></i> Copy</button>"
-        f"<button id='shareBtn' onclick='shareNotification()'><i class='fas fa-share-alt'></i> Share</button>"
-    )
 
 class AccountData:
     """
@@ -54,26 +77,28 @@ class AccountData:
                 self.trustlines[asset_code] = True
         return self.trustlines
     
-    def get_account_info_from_csv(self, account):
+    def get_account_info_from_db(self, account):
         """
-        Retrieves account metadata from a CSV file (seed phrase, hexadecimal, password).
+        Retrieves account metadata from MongoDB (seed phrase, hexadecimal, password),
+        decrypting the stored values.
 
-        :param account: Stellar account ID
+        :param account: Stellar account ID (public key)
         :return: Tuple (passphrase, hexadecimal, password) or "Not Found" if not available
         """
         passphrase, hexadecimal, password = "Not Found", "Not Found", "Not Found"
-        file_path = 'wallet_data.csv'
+        
         try:
-            with open(file_path, mode='r', newline='') as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    if len(row) >= 5 and row[0] == account:
-                        passphrase, hexadecimal, password = row[2], row[3], row[4]
-                        break
+            # Busca o documento pelo public_key
+            wallet = wallet_data_collection.find_one({"keypair": account})
 
-        except FileNotFoundError:
-            print("CSV file not found.")
-            
+            if wallet:
+                passphrase = fernet.decrypt(wallet["seed_phrase"].encode()).decode()
+                hexadecimal = fernet.decrypt(wallet["hexadecimal"].encode()).decode()
+                password = fernet.decrypt(wallet["password"].encode()).decode()
+
+        except Exception as e:
+            print(f"Error while fetching account from MongoDB or decoding data: {e}")
+        
         return passphrase, hexadecimal, password
         
     def execute(self):
@@ -108,7 +133,7 @@ class AccountData:
             # Check if account exists on the selected network
             try:
                 account_data_transaction = server.accounts().account_id(account).call()
-                passphrase, hexadecimal, password = self.get_account_info_from_csv(account)
+                passphrase, hexadecimal, password = self.get_account_info_from_db(account)
 
                 message = (
                         f"<br>"
@@ -117,7 +142,6 @@ class AccountData:
                         f"<strong>Hexadecimal:</strong> <br> {hexadecimal} <br><br>"
                         f"<strong>Password:</strong> <br> {password} <br><br>"
                         f"<br>"
-                        + generate_buttons()
                     )
 
                 return message
@@ -129,34 +153,18 @@ class AccountData:
                         testnet_server = Server(horizon_url="https://horizon-testnet.stellar.org")
                         testnet_server.load_account(account)
 
-                        message = (
-                            "<br>Account does not exist in mainnet, but exists in testnet.<br>"
-                            "Please activate the account on mainnet!<br><br>"
-                            + generate_buttons()
-                        )
+                        message = (f"<br>Account does not exist in mainnet, but exists in testnet.<br>Please activate the account on mainnet!<br>")
 
                         return message
                     
                     except Exception:
-                        message = (
-                            "<br>Account does not exist in any network.<br>"
-                            "Please logout and generate a new account.<br><br>"
-                            + generate_buttons()
-                        )
+                        message = (f"<br>Account does not exist in any network.<br>Please logout and generate a new account.<br>")
                         return message
                     
                 else:
-                    message = (
-                        "<br>Account not found in the testnet.<br>"
-                        "Please logout and generate a new account.<br><br>"
-                        + generate_buttons()
-                    )
+                    message = (f"<br>Account not found in the testnet.<br>Please logout and generate a new account.<br>")
                     return message
             
         except Exception as e:
-            message = (
-                f"<br>"
-                f"Error generating account data: {e}<br>"
-                f"<br>"
-            )
+            message = (f"<br>Error generating account data: {e}<br>")
             return message

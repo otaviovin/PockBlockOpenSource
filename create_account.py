@@ -1,11 +1,33 @@
+# ========================
+# Imports and Dependencies
+# ========================
+
+# Stellar SDK components used to interact with the Stellar blockchain network
 from stellar_sdk import Keypair, Network, Server, TransactionBuilder, Asset
+
+# Module for reading and writing CSV files
 import csv
+
+# Module for encoding and decoding data in base64 format
 import base64
+
+# Module for interacting with the operating system environment variables
 import os
+
+# Loads environment variables from a .env file into the environment
 from dotenv import load_dotenv
+
+# MongoDB client used for connecting and interacting with a MongoDB database
 from pymongo import MongoClient
+
+# Module to work with time durations (used for expiration and scheduling)
 from datetime import timedelta
+
+# Module to work with dates and times
 import datetime
+
+# Fernet is part of the cryptography package; it provides symmetric encryption and decryption
+from cryptography.fernet import Fernet
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,17 +40,17 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 if not MONGODB_URI:
     raise ValueError("Error: MONGODB_URI is not defined in the .env file")
 
+# 
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
 # Initializing the MongoDB client using the MongoDB URI with TLS encryption enabled
 client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 data_db = client["datapocketblock"]
 data_collection = data_db["userdata"]
 
-def generate_buttons():
-    return (
-        f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-        f"<button id='copyBtn' onclick='copyToClipboard()'><i class='fas fa-copy'></i> Copy</button>"
-        f"<button id='shareBtn' onclick='shareNotification()'><i class='fas fa-share-alt'></i> Share</button>"
-    )
+wallet_data_collection = data_db["wallet_data"]
+
+fernet = Fernet(ENCRYPTION_KEY.encode())
 
 class CreateAccount:
     """
@@ -69,13 +91,7 @@ class CreateAccount:
                 # Valor padrão de 0.5 XLM se não encontrado
                 base_reserve_stroops = 5_000_000
 
-            print(f"base_reserve_stroops: {base_reserve_stroops}")
-
             base_reserve_xlm = base_reserve_stroops / 10_000_000
-
-            print(f"root_info: {root_info}")
-            print(f"base_reserve_stroops: {base_reserve_stroops}")
-            print(f"base_reserve_xlm: {base_reserve_xlm}")
 
             # 2 para a conta + 1 para a trustline (se necessário)
             num_entries = 2  # conta nova sem extra data ou offers
@@ -85,11 +101,10 @@ class CreateAccount:
                 num_entries += 1  # adiciona 1 trustline
 
             minimum_balance = (base_reserve_xlm * num_entries) + guarantee_value
-            print(f"minimum_balance: {minimum_balance}")
             return round(minimum_balance, 7)  # boa prática: até 7 casas decimais
         
         except Exception as e:
-            raise Exception(f"Erro ao calcular minimum_balance: {e}")
+            raise Exception(f"Failed to calculate minimum_balance: {e}")
 
     def create_trustlines(self, server, destination, bfee, network_passphrase):
         try:
@@ -126,12 +141,7 @@ class CreateAccount:
             return f"Trustline for {asset_to_add.code} created successfully."
 
         except Exception as e:
-            message = (
-                f"<br>"
-                f"Trustline creation failed: {e}<br>"
-                f"<br>"
-                + generate_buttons()
-            )
+            message = (f"<br>Trustline creation failed: {e}<br>")
             return message
 
     def transfer_asset(self, server, source, destination, bfee, network_passphrase):
@@ -163,34 +173,33 @@ class CreateAccount:
             transaction.sign(source)
             server.submit_transaction(transaction)
             message = (
-                f"<br>"
-                f"Asset transferred successfully."
-                f"<strong>From account:</strong> <br> {source_account} <br>"
-                f"<strong>To account:</strong> <br> {destination.public_key} <br>"
+                f"<br>Asset transferred successfully.<br><br>"
+                f"<strong>From account:</strong> <br> {source_account} <br><br>"
+                f"<strong>To account:</strong> <br> {destination.public_key} <br><br>"
                 f"<strong>Value:</strong> <br> {self.amount} {self.asset_code} <br>"
-                f"<br>"
-                + generate_buttons()
             )
             return message
         
         except Exception as e:
-            message = (
-                f"<br>"
-                f"Asset transfer failed: {e}<br><br"
-                f"<br>"
-                + generate_buttons()
-            ) 
+            message = (f"<br>Asset transfer failed: {e}<br>") 
 
-    def save_to_csv(self, public_key, secret_key, seed_phrase, hexadecimal, password):
+    def save_wallet_to_db(self, public_key, secret_key, seed_phrase, hexadecimal, password):
         """
-        Saves account information to a CSV file.
+        Salva os dados da carteira no MongoDB com os valores criptografados usando Fernet.
         """
         try:
-            with open('wallet_data.csv', mode='a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([public_key, secret_key, seed_phrase, hexadecimal, password])
+            encrypted_data = {
+                "keypair": fernet.encrypt(public_key.encode()).decode(),
+                "seed": fernet.encrypt(secret_key.encode()).decode(),
+                "seed_phrase": fernet.encrypt(seed_phrase.encode()).decode(),
+                "hexadecimal": fernet.encrypt(hexadecimal.encode()).decode(),
+                "password": fernet.encrypt(password.encode()).decode()
+            }
+
+            wallet_data_collection.insert_one(encrypted_data)
+            
         except Exception as e:
-            print(f"Failed to save to CSV: {e}")
+            print(f"Failed to save encrypted wallet to MongoDB: {e}")
 
     def generate_seed_phrase(self, secret_key):
         """
@@ -218,7 +227,6 @@ class CreateAccount:
         """
         try:
             # Configure the Stellar network and Horizon URL
-            print("Connecting to Stellar Testnet server...")
             horizon_url = HORIZON_URL
             network_passphrase = Network.TESTNET_NETWORK_PASSPHRASE if self.network == 'testnet' else Network.PUBLIC_NETWORK_PASSPHRASE
             server = Server(horizon_url=horizon_url)
@@ -247,33 +255,21 @@ class CreateAccount:
 
             try:
                 trustline_status = self.create_trustlines(server, destination, int(self.bfee), network_passphrase)
-                print(f"trustline_status: {trustline_status}")
                 
             except Exception as e:
-                message = (
-                    f"<br>"
-                    f"Error creating trustline: {e}<br><br"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>Error creating trustline: {e}<br>")
                 return message
 
             try:
                 transfer_status = self.transfer_asset(server, source, destination, int(self.bfee), network_passphrase)
-                print(f"transfer_status: {transfer_status}")
 
             except Exception as e:
-                message = (
-                    f"<br>"
-                    f"Error transfer asset: {e}<br><br"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>Error transfer asset: {e}<br>")
                 return message
 
-            # Generate seed_phrase and save in the wallet_data.csv
+            # Generate seed_phrase and save in the wallet_data in MongoDB
             seed_phrase, hexadecimal = self.generate_seed_phrase(destination.secret)
-            self.save_to_csv(destination.public_key, destination.secret, seed_phrase, hexadecimal, self.password)
+            self.save_wallet_to_db(destination.public_key, destination.secret, seed_phrase, hexadecimal, self.password)
 
             try:
                 keypair = source_account
@@ -292,32 +288,19 @@ class CreateAccount:
                 data_collection.insert_one(user_data)
 
             except Exception as e:
-                message = (
-                    f"<br>"
-                    f"Create account filling all setting fields<br><br"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>Create account filling all setting fields<br>")
                 return message
 
             message = (
-                f"<br>"
-                f"Account created successfully.<br>"
-                f"<strong>From account:</strong> <br> {source_account} <br>"
-                f"<strong>To account:</strong> <br> {destination.public_key} <br> <br> {destination.secret} <br>"
-                f"<strong>Seed Phrase:</strong> <br> {seed_phrase} <br>"
-                f"<strong>Value:</strong> <br> {self.amount} {self.asset_code} <br>"
+                f"<br>Account created successfully.<br><br>"
+                f"<strong>From account:</strong> <br> {source_account} <br><br>"
+                f"<strong>To account:</strong> <br> {destination.public_key} <br> <br> {destination.secret} <br><br>"
+                f"<strong>Seed Phrase:</strong> <br> {seed_phrase} <br><br>"
+                f"<strong>Value:</strong> <br> {self.amount} {self.asset_code} <br><br>"
                 f"<strong>Transaction Hash:</strong> <br> {response_hash}, {trustline_status} <br>"
-                f"<br>"
-                + generate_buttons()
             )
             return message
         
         except Exception as e:
-            message = (
-                f"<br>"
-                f"Error creating account: {e}<br><br"
-                f"<br>"
-                + generate_buttons()
-            )
+            message = (f"<br>Error creating account: {e}<br>")
             return message

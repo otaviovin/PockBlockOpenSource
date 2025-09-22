@@ -46,9 +46,9 @@ services:
     networks:
       - pocketblock_rede
     environment:
-      - VIRTUAL_HOST=pocketblock.io
+      - VIRTUAL_HOST=pocketblock.io,www.pocketblock.io
       - VIRTUAL_PORT=5000
-      - LETSENCRYPT_HOST=pocketblock.io
+      - LETSENCRYPT_HOST=pocketblock.io,www.pocketblock.io
       - LETSENCRYPT_EMAIL=pocketblock@pocketblock.io
     command: gunicorn main:app --workers=4 --bind=0.0.0.0:5000 --access-logfile=- --error-logfile=-
 

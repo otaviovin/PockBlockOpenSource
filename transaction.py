@@ -1,9 +1,34 @@
+# ========================
+# Imports and Dependencies
+# ========================
+
+# Imports core classes for interacting with the Stellar network:
+# - Keypair: for key generation and signing
+# - Server: to connect to Horizon server (Stellar API)
+# - Network: to define which network (testnet or public) is used
+# - TransactionBuilder: for building and signing Stellar transactions
+# - Asset: for working with custom or native assets
+# - exceptions: general exception classes related to Stellar operations
 from stellar_sdk import Keypair, Server, Network, TransactionBuilder, Asset, exceptions
+
+# Specific exception class for invalid Stellar secret seeds
 from stellar_sdk.exceptions import Ed25519SecretSeedInvalidError
+
+# MongoDB client to connect and interact with a MongoDB database
 from pymongo import MongoClient
+
+# OS module to interact with the file system or environment
 import os
+
+# Loads environment variables from a .env file into the runtime environment
 from dotenv import load_dotenv
+
+# Provides accurate decimal arithmetic, particularly important in financial applications
+# - ROUND_DOWN ensures values are truncated, not rounded up
 from decimal import Decimal, ROUND_DOWN
+
+# Utility for encoding/decoding Stellar keys (e.g., converting between public/secret keys and raw bytes)
+from stellar_sdk import StrKey
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,13 +40,6 @@ HORIZON_URL = os.getenv("SERVER_URL") # Server url
 mongo_client = MongoClient(os.getenv("MONGODB_URI"))
 data_db_withdraw = mongo_client["withdrawpocketblock"]
 settings_collection = data_db_withdraw["settings_value_fiat"]
-
-def generate_buttons():
-    return (
-        f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-        f"<button id='copyBtn' onclick='copyToClipboard()'><i class='fas fa-copy'></i> Copy</button>"
-        f"<button id='shareBtn' onclick='shareNotification()'><i class='fas fa-share-alt'></i> Share</button>"
-    )
 
 class Transaction:
     """
@@ -75,8 +93,6 @@ class Transaction:
         self.amount_sell = amount_sell
 
         # Configure the Stellar network and Horizon URL
-        print("Connecting to Stellar server...")
-        print(f"self.seed: {self.seed}")
         self.horizon_url = HORIZON_URL
         self.network_passphrase = Network.TESTNET_NETWORK_PASSPHRASE if self.network == 'testnet' else Network.PUBLIC_NETWORK_PASSPHRASE
         self.server = Server(horizon_url=self.horizon_url)
@@ -90,32 +106,24 @@ class Transaction:
         """
         
         # Determine the Horizon server URL based on the selected network
-        # server_url = "https://horizon-testnet.stellar.org"
-        server_url = "https://horizon.stellar.org"
+        server_url = HORIZON_URL
         
         try:
-            # Connect to Stellar's Horizon server
-            server = Server(horizon_url=server_url)
-            account = server.accounts().account_id(self.keypair).call()
             
-            print(account['balances'])  # Debugging statement
-
-            # Default asset balance
-            asset_balance = "0"
+            server = Server(horizon_url=server_url) # Connect to Stellar's Horizon server
+            account = server.accounts().account_id(self.keypair).call()
+            asset_balance = "0" # Default asset balance
 
             # Loop through account balances to find the requested asset
             for balance in account["balances"]:
                 # if (self.withdraw_asset_code == "XLM" and balance["asset_type"] == "native") or (balance.get("asset_code") == self.withdraw_asset_code):
                 if (balance.get("asset_code") == self.sender_asset_code):    
-                    print(f"Withdraw Amount: {self.amount_sell} {self.sender_asset_code}")
-                    print(f"Available Balance: {balance['balance']} {self.sender_asset_code}")
                     asset_balance = float(balance["balance"])
                     return asset_balance  # Return balance immediately
 
             return asset_balance  # If asset is not found, return 0
 
         except Exception as e:
-            print(f"Error fetching Stellar balance: {str(e)}")
             return f"Error fetching Stellar balance: {str(e)}"
 
     def has_trustline(self, account_id, asset_code, issuer):
@@ -131,15 +139,21 @@ class Transaction:
             bool: True if the trustline exists, False otherwise.
         """
         try:
-            account = self.server.load_account(account_id)
+            account_id_clean = account_id.split("#")[0].strip()
+            account = self.server.load_account(account_id_clean)
 
             # Checks for the trustline
             for balance in account.balances:
-                if balance.get('asset_code') == asset_code and balance.get('asset_issuer') == issuer:
+                if (
+                    balance.get("asset_code") == asset_code and
+                    balance.get("asset_issuer") == issuer and
+                    balance.get("is_authorized", True) 
+                ):
                     return True
+                
             return False
+        
         except Exception as e:
-            print(f"Error checking trustline: {e}")
             return False
 
     def create_trustline(self, account_id, asset_code, issuer):
@@ -156,6 +170,7 @@ class Transaction:
         """
         try:
             secret_key = self.seed
+            
             if not secret_key:
                 raise ValueError("Secret key is not provided.")
 
@@ -188,7 +203,6 @@ class Transaction:
             return response
 
         except Exception as e:
-            print(f"Error creating trustline: {e}")
             return None
 
     def check_liquidity(self, send_asset, dest_asset, send_amount):
@@ -210,8 +224,6 @@ class Transaction:
                 destination=[dest_asset]
             ).call()
 
-            print(f"paths: {paths}")
-
             if len(paths['_embedded']['records']) > 0:
                 return True
             
@@ -219,7 +231,6 @@ class Transaction:
                 return False
             
         except Exception as e:
-            print(f"Error checking liquidity: {e}")
             return False
 
     def execute(self):
@@ -238,23 +249,13 @@ class Transaction:
             secret_key = self.seed
             source_keypair = Keypair.from_secret(secret_key)
             sender_account_id = source_keypair.public_key
-            
             sender_balance = self.get_balance()
-            print(f"sender_balance: {Decimal(sender_balance)}")
-            print(f"self.amount_sell: {Decimal(self.amount_sell)}")
 
             # if Decimal(current_balance) < Decimal(self.withdraw_amount):
 
             if Decimal(sender_balance) < Decimal(self.amount_sell):
-                message = (
-                    f"<br>"
-                    f"Error: Insufficient balance of {self.sender_asset_code} in the sender's account.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>Error: Insufficient balance of {self.sender_asset_code} in the sender's account.<br>")
                 return message
-
-            secret_key = self.seed
 
             if not secret_key:
                 raise ValueError("Secret key is not provided.")
@@ -267,9 +268,9 @@ class Transaction:
 
             source_keypair = Keypair.from_secret(secret_key)
             source_account = self.server.load_account(account_id=source_keypair.public_key)
-            print(f"source_account: {source_account}")
-
             destination_account = self.destination_account
+            if destination_account:
+                destination_account = destination_account
             amount_asset_sell = self.amount_sell
 
             settings_usd = settings_collection.find_one({"withdraw_type": "USD"})
@@ -286,96 +287,56 @@ class Transaction:
 
             FEE_ADDRESS = os.getenv("FEE_ADDRESS")
 
-            # Definir o sender e o ativo com base na escolha do usuário
             if self.sender_asset_code == 'USDC':
                 send_asset = Asset("USDC", os.getenv("USDC_ADDRESS"))
             elif self.sender_asset_code == 'EURC':
                 send_asset = Asset("EURC", os.getenv("EURC_ADDRESS"))
             else:
-                message = (
-                    f"<br>"
-                    "Error: Sender asset invalid.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                    )
+                message = (f"<br>Error: Sender asset invalid.<br>")
                 return message
 
-            # Definir o emissor e o ativo com base na escolha do usuário
             if self.asset_code == 'USDC':
                 asset = Asset("USDC", os.getenv("USDC_ADDRESS"))
             elif self.asset_code == 'EURC':
                 asset = Asset("EURC", os.getenv("EURC_ADDRESS"))
             else:
-                message = (
-                    f"<br>"
-                    "Error: Receiver asset invalid.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                    )
+                message = (f"<br>Error: Receiver asset invalid.<br>")
                 return message
 
-            print(f"Transaction between {self.sender_asset_code} and {self.asset_code}")
-
-            # Verificar se há liquidez antes de continuar
             liquidity_available = self.check_liquidity(send_asset, asset, self.amount_sell)
 
             if not liquidity_available:
-                message = (
-                    f"<br>"
-                    f"There is not enough liquidity to exchange {self.amount_sell} {self.sender_asset_code} for {self.asset_code}.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>There is not enough liquidity to exchange {self.amount_sell} {self.sender_asset_code} for {self.asset_code}.<br>")
                 return message
 
 
-            # Verificar se a conta tem a trustline
             has_trust = self.has_trustline(destination_account, self.asset_code, asset.issuer)
-
             has_trust_fee_address = self.has_trustline(FEE_ADDRESS, self.asset_code, asset.issuer)
 
             if not has_trust:
-                print(f"Trustline not found. Creating trustline for {self.asset_code}...")
                 trustline_response = self.create_trustline(destination_account, self.asset_code, asset.issuer)
 
                 if trustline_response is None:
-                    print(f"Error: Criation of trustline break for {self.asset_code}.")
-                    message = (
-                        f"<br>"
-                        f"Error: Criation of trustline break for {self.asset_code}.<br>"
-                        f"<br>"
-                        + generate_buttons()
-                        )
+                    message = (f"<br>Error: Criation of trustline break for {self.asset_code}.<br>")
                     return message
                 
             if not has_trust_fee_address:
-                print(f"Trustline not found for fee_address. Creating trustline for {self.asset_code}...")
                 trustline_response_fee = self.create_trustline(FEE_ADDRESS, self.asset_code, asset.issuer)
 
                 if trustline_response_fee is None:
-                    print(f"Error: Criation of trustline break for {self.asset_code}.")
-                    message = (
-                        f"<br>"
-                        f"Error: Criation of trustline break for {self.asset_code}.<br>"
-                        f"<br>"
-                        + generate_buttons()
-                        )
+                    message = (f"<br>Error: Criation of trustline break for {self.asset_code}.<br>")
                     return message
                         
-            print(f"Trustline created for {self.asset_code} succefully, for {destination_account}.")
-            print(f"Trustline created for {self.asset_code} succefully, for {FEE_ADDRESS}.")
-            print("Proceeding with the transaction...")
-
             source_account = self.server.load_account(account_id=source_keypair.public_key)
 
             try:
                 if self.sender_asset_code == self.asset_code:
-                    print("assets iguais")
 
                     if self.sender_asset_code == "USDC" and self.asset_code =="USDC":
                         asset = Asset("USDC", os.getenv("USDC_ADDRESS"))
                         amount_fee = ((Decimal(self.amount_sell)) * (float_value_usd / float_value_eur)) * float_perc_withdraw_usd
                         amount_fee_value = amount_fee.quantize(Decimal("0.000001"), rounding=ROUND_DOWN)
+
                     elif self.sender_asset_code == "EURC" and self.asset_code =="EURC":
                         asset = Asset("EURC", os.getenv("EURC_ADDRESS"))
                         amount_fee = ((Decimal(self.amount_sell)) * (float_value_eur / float_value_usd)) * float_perc_withdraw_eur
@@ -384,6 +345,9 @@ class Transaction:
                     print (f"asset: {asset}")
                     print (f"amount_fee_value: {amount_fee_value}")
                     print (f"amount_asset_sell: {amount_asset_sell}")
+                    
+                    destination_account_clean = destination_account.split("#")[0].strip()
+                    fee_address_clean = FEE_ADDRESS.split("#")[0].strip()
 
                     text_memo = f"tx {self.sender_asset_code} to {self.asset_code}"
                     transaction = (
@@ -394,12 +358,12 @@ class Transaction:
                         )
                         .add_text_memo(text_memo)
                         .append_payment_op(
-                            destination_account,
+                            destination_account_clean,
                             asset, 
                             str(amount_asset_sell)
                         )
                         .append_payment_op(
-                            FEE_ADDRESS, 
+                            fee_address_clean, 
                             asset, 
                             str(amount_fee_value)
                         )
@@ -407,9 +371,7 @@ class Transaction:
                         .build()
                     )
 
-                else:
-                    print("assets diferentes")
-                    
+                else:                    
                     if self.sender_asset_code == 'USDC' and self.asset_code == 'EURC':
                         amount_min = ((Decimal(self.amount_sell)) * (float_value_usd / float_value_eur))
                         amount_fee = ((Decimal(self.amount_sell)) * (float_value_usd / float_value_eur)) * float_perc_withdraw_usd
@@ -446,37 +408,21 @@ class Transaction:
                 
                 transaction.sign(source_keypair)
                 response = self.server.submit_transaction(transaction)
-
-                print(response)
+                
                 message = (
-                            f"<br>"
-                            f"<strong>From account:</strong> <br> {source_account} <br>"
-                            f"<strong>To account:</strong> <br> {destination_account} <br>"
-                            f"<strong>Network:</strong> <br> {self.horizon_url} - {self.network} <br>"
-                            f"<strong>Send:</strong> <br> {str(amount_asset_sell)} {self.sender_asset_code} from account {source_account} <br>"
-                            f"<strong>Receive:</strong> <br> {str(amount_asset_sell)} {self.asset_code} in account {destination_account} <br>"
-                            f"<br>"
+                            f"<br><strong>From account:</strong> <br> {source_account} <br><br>"
+                            f"<strong>To account:</strong> <br> {destination_account} <br><br>"
+                            f"<strong>Network:</strong> <br> {self.horizon_url} - {self.network} <br><br>"
+                            f"<strong>Send:</strong> <br> {str(amount_asset_sell)} {self.sender_asset_code} <br> from account {source_account} <br><br>"
+                            f"<strong>Receive:</strong> <br> {str(amount_asset_sell)} {self.asset_code} <br> in account {destination_account} <br>"
                             # f"<strong>Transaction submitted successfully!</strong> <br> Response: {response}"
-                            + generate_buttons()
                         )
-
                 return message
+            
             except exceptions.BadRequestError as e:
-                print("Bad request - check your transaction parameters.", e)
-                message = (
-                    f"<br>"
-                    f"Bad request - check your transaction parameters.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                    )
+                message = (f"<br>Bad request - check your transaction parameters.<br>")
                 return message
                 
         except Exception as e:
-            print("An unexpected error occurred:", e)
-            message = (
-                f"<br>"
-                f"Error: During transaction - check your transaction parameters.<br>"
-                f"<br>"
-                + generate_buttons()
-                )
+            message = (f"<br>Error: During transaction - check your transaction parameters.<br>") 
             return message

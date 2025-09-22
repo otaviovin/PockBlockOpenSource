@@ -1,11 +1,39 @@
+# ========================
+# Imports and Dependencies
+# ========================
+
+# Provides classes for manipulating dates and times.
+# Used for timestamping and time-based logic.
 import datetime
+
+# 'random': used for generating random values (e.g., keys, codes)
+# 'string': provides constants like string.ascii_letters for generating random strings
 import random
 import string
+
+# MongoDB client for connecting to and interacting with a MongoDB database.
 from pymongo import MongoClient
+
+# Core components from the Stellar SDK for working with accounts, transactions, and assets.
+# - Server: Connects to the Stellar Horizon API server
+# - Keypair: Handles key generation and signing
+# - TransactionBuilder: Builds transactions on the Stellar network
+# - Asset: Represents a Stellar asset (e.g., USDC, EURC)
+# - Network: Defines the Stellar network being used (testnet or mainnet)
+# - exceptions: Handles general SDK exceptions during Stellar operations
 from stellar_sdk import Server, Keypair, TransactionBuilder, Asset, Network, exceptions
+
+# Specific exception for invalid Stellar secret keys (e.g., wrong format or checksum)
 from stellar_sdk.exceptions import Ed25519SecretSeedInvalidError
+
+# 'os': Provides access to environment variables and file system
+# 'load_dotenv': Loads environment variables from a .env file into the Python environment
 import os
 from dotenv import load_dotenv
+
+# Provides high-precision decimal arithmetic, useful for financial transactions.
+# - Decimal: For representing exact values (e.g., account balances)
+# - ROUND_DOWN: Ensures rounding behavior that avoids exceeding balances
 from decimal import Decimal, ROUND_DOWN
 
 # Load environment variables from .env file
@@ -19,13 +47,6 @@ mongo_client = MongoClient(os.getenv("MONGODB_URI"))
 data_db_withdraw = mongo_client["withdrawpocketblock"]
 transactions_collection = data_db_withdraw["withdraws"]
 settings_collection = data_db_withdraw["settings_value_fiat"]
-
-def generate_buttons():
-    return (
-        f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-        f"<button id='copyBtn' onclick='copyToClipboard()'><i class='fas fa-copy'></i> Copy</button>"
-        f"<button id='shareBtn' onclick='shareNotification()'><i class='fas fa-share-alt'></i> Share</button>"
-    )
 
 class Withdraw:
     """
@@ -74,25 +95,18 @@ class Withdraw:
             # Connect to Stellar's Horizon server
             server = Server(horizon_url=server_url)
             account = server.accounts().account_id(self.keypair).call()
-            
-            print(account['balances'])  # Debugging statement
-
-            # Default asset balance
-            asset_balance = "0"
+            asset_balance = "0" # Default asset balance
 
             # Loop through account balances to find the requested asset
             for balance in account["balances"]:
                 # if (self.withdraw_asset_code == "XLM" and balance["asset_type"] == "native") or (balance.get("asset_code") == self.withdraw_asset_code):
-                if (balance.get("asset_code") == self.withdraw_asset_code):    
-                    print(f"Withdraw Amount: {self.withdraw_amount} {self.withdraw_asset_code}")
-                    print(f"Available Balance: {balance['balance']} {self.withdraw_asset_code}")
+                if (balance.get("asset_code") == self.withdraw_asset_code):
                     asset_balance = float(balance["balance"])
                     return asset_balance  # Return balance immediately
 
             return asset_balance  # If asset is not found, return 0
 
         except Exception as e:
-            print(f"Error fetching Stellar balance: {str(e)}")
             return f"Error fetching Stellar balance: {str(e)}"
     
     def has_trustline(self, account_id, asset_code, issuer):
@@ -109,21 +123,25 @@ class Withdraw:
         """
         try:
             # Configure the Stellar network and Horizon URL
-            print("Connecting to Stellar server...")
             horizon_url = HORIZON_URL
             network_passphrase = Network.TESTNET_NETWORK_PASSPHRASE if self.network == 'testnet' else Network.PUBLIC_NETWORK_PASSPHRASE
-            
             server = Server(horizon_url=horizon_url)
-            account = server.load_account(account_id)
+            account_id_clean = account_id.split("#")[0].strip()
+            account = server.load_account(account_id_clean)
             
-            # Check if the trustline exists in the account's balances
-            for balance in account.balances:
-                if balance.get('asset_code') == asset_code and balance.get('asset_issuer') == issuer:
+            # Checks for the trustline
+            for balance in account.balances:              
+                if (
+                    balance.get("asset_code") == asset_code and
+                    balance.get("asset_issuer") == issuer and
+                    balance.get("is_authorized", True) 
+                ):
                     return True
+                
             return False
         
         except Exception as e:
-            print(f"Error checking trustline: {e}")
+            message = (f"<br>Error checking trustline: {e}<br>")
             return False
     
     def create_trustline(self, account_id, asset_code, issuer):
@@ -170,8 +188,9 @@ class Withdraw:
             transaction.sign(keypair)
             response = server.submit_transaction(transaction)
             return response
+        
         except Exception as e:
-            print(f"Error creating trustline: {e}")
+            message = (f"<br>Error creating trustline: {e}<br>")
             return None
     
     def check_liquidity(self, send_asset, dest_asset, send_amount):
@@ -197,10 +216,12 @@ class Withdraw:
 
             if len(paths['_embedded']['records']) > 0:
                 return True
+            
             else:
                 return False
+            
         except Exception as e:
-            print(f"Error checking liquidity: {e}")
+            message = (f"Error checking liquidity: {e}")
             return False
         
     def withdraw_transaction(self, withdraw_amount, withdraw_name, withdraw_asset, withdraw_idnumber, description_withdraw, withdraw_type, withdraw_bank, withdraw_bank_ag, withdraw_bank_cc, withdraw_country, withdraw_pix, withdraw_fiat):
@@ -237,12 +258,7 @@ class Withdraw:
             destination_account_data = accounts_collection.find_one({"withdraw_asset": self.withdraw_asset_code})
 
             if not destination_account_data:
-                message = (
-                    f"<br>"
-                    f"Erro: Destination account for asset {self.withdraw_asset_code} not found in database.<br>"
-                    f"<br>"
-                    + generate_buttons()
-                )
+                message = (f"<br>Erro: Destination account for asset {self.withdraw_asset_code} not found in database.<br>")
                 return message
 
             # Atribuindo a 'withdraw_account' da conta de destino encontrada
@@ -252,87 +268,58 @@ class Withdraw:
 
                 if self.withdraw_asset_code == "USDC":
                     settings = settings_collection.find_one({"withdraw_type": "USD"})
+
                 elif self.withdraw_asset_code == 'EURC':
                     settings = settings_collection.find_one({"withdraw_type": "EUR"})
+
                 else:
-                    print(f"Error defining settings")
-                    
-                print(f"Settings: {settings}")
+                    message = (f"<br>Error defining settings.<br>")
 
                 try:
                     fee_withdraw = settings["fee"]
-                    print(f"fee percentage found: {fee_withdraw}%")
                     withdraw_amount = Decimal(self.withdraw_amount) + (Decimal(self.withdraw_amount) * Decimal(fee_withdraw))
                     withdraw_amount_value = withdraw_amount.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
                     withdraw_fee = Decimal(self.withdraw_amount) * Decimal(fee_withdraw)
-                    print(f"New value with fee applied: {withdraw_amount_value}")
-                    print(f"Fee value : {withdraw_fee}")
 
                 except (ValueError, TypeError) as e:
-                    print(f"Error applying fee_withdraw: {e}")
+                    message = (f"<br>Error applying fee_withdraw: {e}<br>")
                 
                 # Definir o sender e o ativo com base na escolha do usuário
                 if self.withdraw_asset_code == 'USDC':
                     send_asset = Asset("USDC", os.getenv("USDC_ADDRESS"))
                     asset = Asset("USDC", os.getenv("USDC_ADDRESS"))
+
                 elif self.withdraw_asset_code == 'EURC':
                     send_asset = Asset("EURC", os.getenv("EURC_ADDRESS"))
                     asset = Asset("EURC", os.getenv("EURC_ADDRESS"))
+
                 else:
-                    message = (
-                        f"<br>"
-                        "Error: Sender asset invalid.<br>"
-                        f"<br>"
-                        + generate_buttons()
-                        )
+                    message = (f"<br>Error: Sender asset invalid.<br>")
                     return message
 
                 # Verificar se a conta tem a trustline
                 has_trust = self.has_trustline(source_account, self.withdraw_asset_code, asset.issuer)
 
                 if not has_trust:
-                    print(f"Trustline não encontrada. Criando trustline para {self.withdraw_asset_code}...")
                     trustline_response = self.create_trustline(destination_account, self.withdraw_asset_code, asset.issuer)
 
                     if trustline_response is None:
-                        message = (
-                            f"<br>"
-                            f"Criation of trustline break for {self.withdraw_asset_code}. Quiting.<br>"
-                            f"<br>"
-                            + generate_buttons()
-                            )
+                        message = (f"<br>Criation of trustline break for {self.withdraw_asset_code}. Quiting.<br>")
                         return message
-                    print(f"Trustline created for {self.withdraw_asset_code} succefully.")
-
-                print("Proceeding with the transaction...")
 
                 source_account = server.load_account(account_id=source_keypair.public_key)
 
                 try:
 
                     withdraw_amount = withdraw_amount_value
-                    # Obtém saldo na Stellar antes de permitir o saque
                     balance = self.get_balance()
                     balance = Decimal(balance)
-                    print(f"Saldo disponível de {self.withdraw_asset_code}: {balance}")
-
                     min_length = 26
                     max_length = 35
-
-                    # Pegar os 10 primeiros caracteres da chave pública
                     txid_base = self.keypair[:10]
-                    print(f"txid_base: {txid_base}")
-
-                    # Definir tamanho total aleatório dentro do intervalo permitido
                     total_length = random.randint(min_length, max_length)
-                    print(f"total_length: {total_length}")
-
-                    # Gerar caracteres aleatórios para completar o restante do txid
                     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=total_length - len(txid_base)))
-                    print(f"random_chars: {random_chars}")
-
                     self.txid = txid_base + random_chars
-                    print(f"txid: {self.txid}")
 
                     transaction = (
                         TransactionBuilder(
@@ -355,130 +342,96 @@ class Withdraw:
 
                     transaction.sign(source_keypair)
                     response = server.submit_transaction(transaction)
-                    print(response)
                     
                     try:
                         # Verifica se a transação foi bem-sucedida antes de salvar no MongoDB
                         if response and response.get("successful", False):
-                            print("Transação realizada com sucesso! Salvando no MongoDB...")
+
                             withdraw_fiat = withdraw_asset[:3]
-                            # Salvar transação no MongoDB
+
                             withdraw_data = {
                                 "txid": self.txid,
                                 "withdraw_address": self.keypair,
                                 "withdraw_name": withdraw_name,
-                                "withdraw_idnumber": withdraw_idnumber,
+                                "withdraw_idnumber": str(withdraw_idnumber).zfill(11).strip(),
                                 "withdraw_type": withdraw_type,
                                 "withdraw_description": description_withdraw,
                                 "withdraw_asset": withdraw_asset,
                                 "withdraw_fiat": withdraw_fiat,
-                                "withdraw_amount": str(withdraw_amount),
-                                "withdraw_fee": str(withdraw_fee),
-                                "withdraw_pix": withdraw_pix,
-                                "withdraw_bank": withdraw_bank,
-                                "withdraw_bank_ag": withdraw_bank_ag,
-                                "withdraw_bank_cc": withdraw_bank_cc,
-                                "withdraw_country": withdraw_country,
+                                "withdraw_amount": f"{float(withdraw_amount):.2f}",
+                                "withdraw_fee": f"{float(withdraw_fee):.2f}",
+                                "withdraw_pix": str(withdraw_pix).strip(),
+                                "withdraw_bank": str(withdraw_bank).zfill(3).strip(),
+                                "withdraw_bank_ag": str(withdraw_bank_ag).zfill(4).strip(),
+                                "withdraw_bank_cc": str(withdraw_bank_cc).strip(),
+                                "withdraw_country": str(withdraw_country).strip(),
                                 "withdraw_response_blockchain": response,
+                                "withdraw_blockchain_status": "SUCCESSFUL",
                                 "withdraw_status": "PENDENTE",
                                 "transaction_datetime": datetime.datetime.utcnow(),
                                 "withdraw_envioid": None,
                                 "withdraw_e2eid": None,
-                                "updated_idenvio_at": datetime.datetime.utcnow()
+                                "withdraw_stark_bank_id": None,
+                                "updated_idenvio_at": datetime.datetime.utcnow(),
+                                "updated_at": datetime.datetime.utcnow()
                             }
 
                             try:
                                 result = transactions_collection.insert_one(withdraw_data)
-                                print("Insert acknowledged:", result.acknowledged)
-                                print("Inserted ID:", result.inserted_id)
                                 
                             except Exception as e:
                                 import traceback
-                                print("Erro ao inserir no MongoDB:")
-                                print(traceback.format_exc())  # imprime a stack trace completa
+                                message = ("<br>Database error:<br>", traceback.format_exc()) # Error inserting into MongoDB
 
                             if result.acknowledged:
                                 if withdraw_type == 'pix':
-                                    print("Message PIX")
                                     message = (
-                                        f"<br>"
-                                        f"<strong>Withdraw from account:</strong> <br> {self.keypair} <br>"
-                                        f"<strong>Saque solicitado via PIX:</strong> <br>"
-                                        f"<strong>Nome:</strong> <br>{withdraw_name} <br>"
-                                        f"<strong>ID Number:</strong> <br>{withdraw_idnumber} <br>"
-                                        f"<strong>Received:</strong> <br> {str(self.withdraw_amount)} {self.withdraw_asset_code} <br>"
-                                        f"<strong>Fee:</strong> <br> {str(withdraw_fee)} {self.withdraw_asset_code} <br>"
-                                        f"<strong>PIX sent to key:</strong> <br> {str(withdraw_pix)} <br>"
+                                        f"<br><strong>Withdrawal requested via PIX:</strong> <br><br>"
+                                        f"<strong>Withdraw from account:</strong> <br> {self.keypair} <br><br>"
+                                        f"<strong>Name:</strong> <br>{withdraw_name} <br><br>"
+                                        f"<strong>ID Number:</strong> <br>{withdraw_idnumber} <br><br>"
+                                        f"<strong>Received:</strong> <br> {str(self.withdraw_amount)} {self.withdraw_asset_code} <br><br>"
+                                        f"<strong>Fee:</strong> <br> {str(withdraw_fee)} {self.withdraw_asset_code} <br><br>"
+                                        f"<strong>PIX sent to key:</strong> <br> {str(withdraw_pix)} <br><br>"
                                         f"<strong>Descrição:</strong> <br>{description_withdraw} <br>"
-                                        f"<br>"
-                                        + generate_buttons()
                                     )
+
                                 elif withdraw_type == 'bank_transfer':
                                     message = (
-                                        f"<br>"
-                                        f"<strong>Withdraw from account:</strong> <br> {self.keypair} <br>"
-                                        f"<strong>Saque solicitado via Transferência Bancária:</strong> <br>"
-                                        f"<strong>Nome:</strong> <br>{withdraw_name} <br>"
-                                        f"<strong>ID Number:</strong> <br>{withdraw_idnumber} <br>"
-                                        f"<strong>Received:</strong> <br> {str(self.withdraw_amount)} {self.withdraw_asset_code} <br>"
-                                        f"<strong>Fee:</strong> <br> {str(withdraw_fee)} {self.withdraw_asset_code} <br>"
-                                        f"<strong>Bank:</strong> <br> {str(withdraw_bank)} <br>"
-                                        f"<strong>AG:</strong> <br> {str(withdraw_bank_ag)} <br>"
-                                        f"<strong>CC:</strong> <br> {str(withdraw_bank_cc)} <br>"
-                                        f"<strong>CC:</strong> <br> {str(withdraw_country)} <br>"
-                                        f"<strong>Descrição:</strong> <br>{description_withdraw} <br>"
-                                        f"<br>"
-                                        + generate_buttons()
+                                        f"<br><strong>Withdrawal requested via Bank Transfer:</strong> <br><br>"
+                                        f"<strong>Withdraw from account:</strong> <br> {self.keypair} <br><br>"
+                                        f"<strong>Name:</strong> <br>{withdraw_name} <br><br>"
+                                        f"<strong>ID Number:</strong> <br>{withdraw_idnumber} <br><br>"
+                                        f"<strong>Received:</strong> <br> {str(self.withdraw_amount)} {self.withdraw_asset_code} <br><br>"
+                                        f"<strong>Fee:</strong> <br> {str(withdraw_fee)} {self.withdraw_asset_code} <br><br>"
+                                        f"<strong>Bank:</strong> <br> {str(withdraw_bank)} <br><br>"
+                                        f"<strong>AG:</strong> <br> {str(withdraw_bank_ag)} <br><br>"
+                                        f"<strong>CC:</strong> <br> {str(withdraw_bank_cc)} <br><br>"
+                                        f"<strong>Country:</strong> <br> {str(withdraw_country)} <br><br>"
+                                        f"<strong>Description:</strong> <br>{description_withdraw} <br>"
                                     )
+
                                 else:
-                                    message = (
-                                        f"<br>"
-                                        "Invalid withdrawal type.<br>"
-                                        f"<br>"
-                                        + generate_buttons()
-                                    )
+                                    message = (f"<br>Invalid withdrawal type.<br>")
+
                                 return message
                             
                             else:
-                                message = (
-                                    f"<br>"
-                                    "Error saving data<br>"
-                                    f"<br>"
-                                    + generate_buttons()
-                                )
+                                message = (f"<br>Error saving data<br>")
                                 return message
                         
                         else:
-                            message = (
-                                f"Transaction was not confirmed: {response}"
-                            )
+                            message = (f"<br>Transaction was not confirmed: {response}")
                             return message
                     
                     except Exception as e:
-                        message = (
-                            f"<br>"
-                            f"Error processing transaction: {str(e)}<br>"
-                            f"<br>"
-                            + generate_buttons()
-                        )
+                        message = (f"<br>Error processing transaction: {str(e)}<br>")
                         return message
 
                 except exceptions.BadRequestError as e:
-                    print("Error: Bad request - check your transaction parameters.", e)
-                    message = (
-                        f"<br>"
-                        f"Check your transaction parameters.<br>"
-                        f"<br>"
-                        + generate_buttons()
-                        )
+                    message = (f"<br>Check your transaction parameters.<br>")
                     return message
                 
         except Exception as e:
-            print("An unexpected error occurred:", e)
-            message = (
-                f"<br>"
-                "Error during transaction.<br>" 
-                f"<br>"
-                + generate_buttons()
-            )
+            message = (f"<br>Error during transaction.<br>")
             return message

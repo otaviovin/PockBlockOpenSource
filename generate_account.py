@@ -1,17 +1,63 @@
+# ========================
+# Imports and Dependencies
+# ========================
+
+# Flask components for handling HTTP requests and returning JSON responses
 from flask import request, jsonify
+
+# Stellar SDK modules for handling accounts, assets, networks, and building transactions
 from stellar_sdk import Keypair, Asset, Server, Network, TransactionBuilder
+
+# Module for reading and writing CSV files
 import csv
+
+# Module to make HTTP requests to external APIs
 import requests
+
+# Module for encoding/decoding Base64 data
 import base64
+
+# Module for converting between binary and ASCII, used for error handling in binary conversions
 import binascii
+
+# Module for interacting with the operating system (e.g., environment variables, file management)
 import os
+
+# Loads environment variables from a `.env` file
 from dotenv import load_dotenv
+
+# MongoDB client for connecting to and interacting with MongoDB databases
 from pymongo import MongoClient
+
+# Module for defining session expiration durations
 from datetime import timedelta
+
+# Module for working with dates and times
 import datetime
+
+# Redundant import (already imported above) – MongoDB client for accessing the database
+from pymongo import MongoClient
+
+# Module from the `cryptography` package for symmetric encryption and decryption of sensitive data
+from cryptography.fernet import Fernet
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Connecting to MongoDB using the URI defined in environment variables
+MONGODB_URI = os.getenv("MONGODB_URI")
+if not MONGODB_URI:
+    raise ValueError("Error: MONGODB_URI is not defined in the .env file")
+
+# 
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
+# Initializing the MongoDB client using the MongoDB URI with TLS encryption enabled
+client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
+data_db = client["datapocketblock"]
+wallet_data_collection = data_db["wallet_data"]
+
+fernet = Fernet(ENCRYPTION_KEY.encode())
 
 GLOBAL_NETWORK = os.getenv("GLOBAL_NETWORK", "mainnet")
 HORIZON_URL = os.getenv("SERVER_URL") # Server url
@@ -94,7 +140,6 @@ class GenerateAccount:
             str: Success or failure message.
         """
         try:
-            print("Initiating creation of trustlines for USDC, EURC, and BRLC...")
 
             # Define assets (USDC, EURC, BRLC)
             usdt_asset = Asset("USDC", os.getenv("USDC_ADDRESS"))  # USDC Issuer
@@ -119,16 +164,12 @@ class GenerateAccount:
             transaction.sign(pair)
             response = server.submit_transaction(transaction)
 
-            message = (
-                f"Trustlines created successfully."
-            )
+            message = (f"Trustlines created successfully.")
 
             return message
 
         except Exception as e:
-            message = (
-                f"Trustlines creation failed."
-            )
+            message = (f"Trustlines creation failed.")
 
             return message
 
@@ -145,7 +186,6 @@ class GenerateAccount:
         Raises:
             ValueError: If file is missing or contains invalid data.
         """
-        print(f"Loading word list from file: {file_path}...")
         word_list = []
         try:
             with open(file_path, mode='r', encoding='utf-8') as file:
@@ -191,55 +231,42 @@ class GenerateAccount:
                 raise ValueError(f"No word found for pair: {pair}")
 
         return " ".join(passphrase)
-
-    def save_to_csv(self, public_key, secret_key, passphrase, hexadecimal, password=None):
+    
+    def save_to_db(public_key, secret_key, passphrase, hexadecimal, password=None):
         """
-        Saves account information to a CSV file.
+        Saves encrypted account information to MongoDB.
 
         Args:
-            public_key (str): Stellar public key.
-            secret_key (str): Stellar secret key.
-            passphrase (str): Mnemonic passphrase.
-            hexadecimal (str): Hexadecimal secret key.
-            password (str, optional): Associated password.
+            public_key (str): Encrypted Stellar public key.
+            secret_key (str): Encrypted Stellar secret key.
+            passphrase (str): Encrypted mnemonic passphrase.
+            hexadecimal (str): Encrypted hexadecimal secret.
+            password (str, optional): Encrypted associated password.
         """
-        file_path = os.path.join(os.path.dirname(__file__), 'wallet_data.csv')
-        rows = []
-
         try:
-            with open(file_path, mode='r', newline='') as file:
-                reader = csv.reader(file)
-                rows = list(reader)
+            # Verifica se já existe esse public_key ou secret_key na coleção
+            existing = wallet_data_collection.find_one({
+                "$or": [
+                    {"keypair": public_key},
+                    {"seed": secret_key}
+                ]
+            })
 
-        except FileNotFoundError:
-            rows = []
-
-        for row in rows:
-            if public_key in row or secret_key in row:
-                print(f"Duplicate found: Public Key: {public_key} or Secret Key: {secret_key}")
+            if existing:
                 return
-        
-        try:
-            absolute_path = os.path.abspath(file_path)
 
-            if os.path.exists(absolute_path):
-                print(f"File {absolute_path} exists.")
+            encrypted_data = {
+                "keypair": public_key,
+                "seed": fernet.encrypt(secret_key.encode()).decode(),
+                "seed_phrase": fernet.encrypt(passphrase.encode()).decode(),
+                "hexadecimal": fernet.encrypt(hexadecimal.encode()).decode(),
+                "password": fernet.encrypt(password.encode()).decode()
+            }
 
-                with open(file_path, mode='a', newline='', encoding='utf-8') as file:
-                    writer = csv.writer(file)
-                    writer.writerow([public_key, secret_key, passphrase, hexadecimal, password])
-                    file.flush()
-
-            else:
-                print(f"File {absolute_path} does not exist. Creating file...")
-                try:
-                    with open(absolute_path, mode='w', newline='', encoding='utf-8') as file:
-                        print(f"File {absolute_path} created successfully.")
-                except Exception as e:
-                    print(f"Error creating file {absolute_path}: {e}")
+            wallet_data_collection.insert_one(encrypted_data)
 
         except Exception as e:
-            print(f"Error writing to CSV file: {e}")
+            print(f"Error saving to MongoDB: {e}")
 
     def execute(self):
         """
@@ -262,20 +289,16 @@ class GenerateAccount:
             else:
                 # Request funds from Friendbot
                 if GLOBAL_NETWORK == "testnet":
-                    print(f"Requesting funds from Friendbot for account {public_key}...")
                     url = "https://friendbot.stellar.org"
                     response = requests.get(url, params={"addr": public_key})
-                    print(f"Friendbot response: {response.status_code}")
                     
                 else:
-                    print(f"Funding new account from mainnet funder to {public_key}...")
                     fund_response = self.fund_new_account(public_key)
-                    print(f"Fund response: {fund_response}")
 
             passphrase = self.secret_key_to_passphrase(secret_key) # Convert secret key to passphrase
             secret_key_bytes = base64.b32decode(secret_key, casefold=True)
             hexadecimal = binascii.hexlify(secret_key_bytes).decode() # Decode secret key to bytes and convert to hexadecimal
-            self.save_to_csv(public_key, secret_key, passphrase, hexadecimal, password)
+            self.save_to_db(public_key, secret_key, passphrase, hexadecimal, password)
 
             # Configure the Stellar network and Horizon URL
             horizon_url = HORIZON_URL

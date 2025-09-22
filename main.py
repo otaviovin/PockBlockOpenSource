@@ -1,7 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify 
-from stellar_sdk import Keypair, Asset, TransactionBuilder, Server, Keypair, Network
+# ========================
+# Imports and Dependencies
+# ========================
+
+# ==== Flask Framework ====
+# Provides tools for building web applications and handling HTTP requests/responses
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
+
+# ==== Stellar SDK ====
+# Tools to interact with the Stellar blockchain (key generation, transaction creation, asset handling, etc.)
+from stellar_sdk import Keypair, Asset, TransactionBuilder, Server, Network
 from stellar_sdk.exceptions import Ed25519SecretSeedInvalidError, NotFoundError
-from stellar_sdk.server import Server
+from stellar_sdk.server import Server  # Redundant but sometimes used for explicitness
+
+# ==== Custom Local Modules ====
+# Custom application modules to handle different wallet and blockchain operations
 from create_account import CreateAccount
 from account_data import AccountData
 from generate_account import GenerateAccount
@@ -9,18 +21,42 @@ from transaction import Transaction
 from receive import Receive
 from buy import Buy
 from withdraw import Withdraw
-import csv
-import base64
-import binascii
-import requests
-import random
-import os
+
+# ==== Standard Library ====
+# Built-in Python libraries for encoding, randomness, file handling, environment variables, etc.
+import csv           # For reading/writing CSV files
+import base64        # For base64 encoding/decoding
+import binascii      # For binary/ASCII conversions (e.g., hex operations)
+import requests      # For making HTTP requests (e.g., APIs)
+import random        # For generating random values
+import os            # For environment variables and file path handling
+import secrets       # For generating cryptographically secure tokens
+import json          # For parsing and stringifying JSON data
+import datetime      # For working with date and time
+from datetime import timedelta  # For calculating expiration or timeout durations
+
+# ==== Environment Variables ====
+# To load configuration and secrets from a .env file
 from dotenv import load_dotenv
+
+# ==== MongoDB ====
+# MongoDB client for accessing the database
 from pymongo import MongoClient
-from datetime import timedelta
-import datetime
-import secrets
-import json
+
+# ==== Stripe ====
+# Payment processing service integration (for handling card payments)
+import stripe
+
+# ==== Fernet ====
+# 
+from cryptography.fernet import Fernet
+
+# Provides accurate decimal arithmetic, particularly important in financial applications
+# - ROUND_DOWN ensures values are truncated, not rounded up
+from decimal import Decimal, ROUND_DOWN
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -44,31 +80,77 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 if not MONGODB_URI:
     raise ValueError("Error: MONGODB_URI is not defined in the .env file")
 
+# Load the encryption key from environment variables
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
 # Initializing the MongoDB client using the MongoDB URI with TLS encryption enabled
 client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 data_db = client["datapocketblock"]
 data_collection = data_db["userdata"]
 ticket_collection = data_db["tickets"]
+wallet_data_collection = data_db["wallet_data"]
 
-# Actual paths to the CSV files
-WALLET_DATA_FILE_PATH = "./wallet_data.csv"
-
-# Creates the uploads folder if it does not exist
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Load environment variables from .env file
-load_dotenv()
+fernet = Fernet(ENCRYPTION_KEY.encode())
 
 GLOBAL_NETWORK = os.getenv("GLOBAL_NETWORK", "mainnet")
 HORIZON_URL = os.getenv("SERVER_URL")  # Server URL
 
+# ====================================
+# Secure Session Enforcement
+# ====================================
+
+# === Stripe API Keys ===
+# Accessing the Stripe public and secret keys from environment variables
+stripe_pub_key = os.getenv('STRIPE_PUB_KEY')
+stripe_sec_key = os.getenv('STRIPE_SEC_KEY')
+stripe.api_key = stripe_sec_key
+
+# ===============================
+# Verifying security configuration for the user
+# ===============================
+# This block ensures that all incoming requests comply with session security standards.
+# It is useful to protect against session hijacking, fixation, and unauthorized access.
+# Note: These checks should be enforced before handling any user-sensitive routes
+# to ensure the session is tied to a consistent client fingerprint (User-Agent + IP).
+
 @app.before_request
 def secure_session():
-    """Ensures the session is secure and correctly renewed."""
+    """
+    Enforces session security before processing each request.
+
+    Responsibilities:
+    - Mark the session as permanent so it respects the lifetime defined in `PERMANENT_SESSION_LIFETIME`.
+    - Generate a secure session ID when the user logs in, if not already set.
+    - Validate that the request comes from the same User-Agent and IP address as initially recorded.
+
+    If any validation fails, the session is cleared and access is denied with HTTP 403 Forbidden.
+
+    Note:
+    - Be cautious with IP address validation when using proxies or load balancers.
+    - HTTPS redirection should be handled at the reverse proxy (e.g., Nginx) if possible.
+    """
     session.permanent = True  # Ensures the session respects the defined expiration
-    if session.get('logged_in') and not session.get('id'):
-        session['id'] = os.urandom(16).hex()  # Generates a new session ID
+    
+    if session.get('logged_in'):
+        # Generate a secure session ID if not present
+        if not session.get('id'):
+            session['id'] = os.urandom(16).hex()
+
+        # Validate User-Agent consistency
+        user_agent = request.headers.get('User-Agent')
+        if not session.get('user_agent'):
+            session['user_agent'] = user_agent
+        elif session['user_agent'] != user_agent:
+            session.clear()
+            abort(403)  # Forbidden: session may have been hijacked
+
+        # Validate IP address consistency
+        ip = request.remote_addr
+        if not session.get('ip'):
+            session['ip'] = ip
+        elif session['ip'] != ip:
+            session.clear()
+            abort(403)  # Forbidden: session may have been hijacked
 
 def load_word_list(file_path):
     word_list = []
@@ -77,9 +159,7 @@ def load_word_list(file_path):
             reader = csv.DictReader(file)  # Reads the CSV as a dictionary
 
             for row in reader:
-                print(f"Row read from file: {row}")  # Adding print to see content
                 word_list.append({"letter": row['letter'], "word": row['word']})
-                print(word_list)
 
             if not word_list:
                 raise ValueError("No word_list found in the file.")
@@ -93,11 +173,27 @@ def load_word_list(file_path):
     return word_list
 
 def hex_to_passphrase(hexadecimal):
-    # Converte o hexadecimal para binário
-    binary_str = bin(int(hexadecimal, 16))[2:].zfill(len(hexadecimal) * 4)  # Garante que todos os bits sejam considerados
-    byte_blocks = [binary_str[i:i+8] for i in range(0, len(binary_str), 8)] # Divide o binário em blocos de 8 bits
-    word_list = load_word_list('words_phrase.csv') # Carrega a word_list do arquivo CSV
-    words = [] # Encontra as palavras correspondentes aos blocos binários
+    """
+    Convert a hexadecimal string into a passphrase based on a word list.
+
+    This function takes a hexadecimal string, converts it to binary, splits it 
+    into 8-bit blocks, and maps each block to a corresponding word from a CSV 
+    word list. The resulting passphrase is a space-separated string of words.
+
+    Args:
+        hexadecimal (str): The hexadecimal string to be converted.
+
+    Returns:
+        str: The generated passphrase.
+
+    Raises:
+        ValueError: If a binary block does not match any word in the word list.
+    """
+
+    binary_str = bin(int(hexadecimal, 16))[2:].zfill(len(hexadecimal) * 4)  # Convert the hexadecimal string to binary # Ensures all bits are considered
+    byte_blocks = [binary_str[i:i+8] for i in range(0, len(binary_str), 8)]  # Split the binary string into 8-bit blocks
+    word_list = load_word_list('words_phrase.csv')  # Load the word list from the CSV file
+    words = [] # Store the words corresponding to each binary block
 
     for block in byte_blocks:
         match = next((item['word'] for item in word_list if item['bin'] == block), None)
@@ -110,61 +206,34 @@ def hex_to_passphrase(hexadecimal):
 
     return " ".join(words)
 
-def save_to_csv(keypair, seed, seed_phrase, hexadecimal, password=None):
-    file_path = 'wallet_data.csv'
-    # Ler o conteúdo atual do arquivo CSV
-    rows = []
+def save_wallet_to_db(keypair, seed, seed_phrase, hexadecimal, password=None):
+    if wallet_data_collection.find_one({'keypair': keypair}) or wallet_data_collection.find_one({'seed': fernet.encrypt(seed.encode()).decode()}):
+        return
 
-    try:
-        with open(file_path, mode='r', newline='') as file:
-            reader = csv.reader(file)
-            rows = list(reader)
+    encrypted_data = {
+        'keypair': keypair,
+        'seed': fernet.encrypt(seed.encode()).decode(),
+        'seed_phrase': fernet.encrypt(seed_phrase.encode()).decode(),
+        'hexadecimal': fernet.encrypt(hexadecimal.encode()).decode(),
+        'password': fernet.encrypt(password.encode()).decode() if password else None
+    }
 
-    except FileNotFoundError:
-        rows = []
+    wallet_data_collection.insert_one(encrypted_data)
 
-    # Verificar se a seed ou keypair já existem no arquivo
-    for row in rows:
-        if keypair in row or seed in row:
-            print("Seed or Keypair already exists in the CSV file.")
-            return  # Não adiciona nada se a seed ou keypair já estiver presente
-
-    # Se não existir, adicionar a nova linha com a senha
-    with open(file_path, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([keypair, seed, seed_phrase, hexadecimal, password])
-        print("New record added to CSV file.")
-
-def get_accounts_from_csv():
+def get_accounts_from_db():
     accounts = []
-    file_path = 'wallet_data.csv'
+    for doc in wallet_data_collection.find():
+        try:
+            accounts.append({
+                'keypair': doc['keypair'],
+                'seed': fernet.decrypt(doc['seed'].encode()).decode(),
+                'seed_phrase': fernet.decrypt(doc['seed_phrase'].encode()).decode(),
+                'hexadecimal': fernet.decrypt(doc['hexadecimal'].encode()).decode(),
+                'password': fernet.decrypt(doc['password'].encode()).decode() if doc.get('password') else None
+            })
 
-    try:
-        with open(file_path, mode='r', newline='') as file:
-            reader = csv.reader(file)
-
-            for row in reader:
-
-                if len(row) >= 5:  # Certificar-se de que todas as colunas estão presentes
-                    accounts.append({
-                        'keypair': row[0],
-                        'seed': row[1],
-                        'seed_phrase': row[2],
-                        'hexadecimal': row[3],
-                        'password': row[4]  # Adiciona a senha ao dicionário
-                    })
-
-                elif len(row) == 4:  # Caso a senha não esteja presente (linhas antigas)
-                    accounts.append({
-                        'keypair': row[0],
-                        'seed': row[1],
-                        'seed_phrase': row[2],
-                        'hexadecimal': row[3],
-                        'password': None
-                    })
-
-    except FileNotFoundError:
-        print("CSV file not found.")
+        except Exception as e:
+            print(f"Failed to decrypt document: {e}")
 
     return accounts
 
@@ -181,7 +250,6 @@ def get_balance():
         account = server.accounts().account_id(keypair).call()
         balances = account['balances']
 
-        # Variáveis para armazenar os saldos
         xlm_balance = "0"
         usdc_balance = "0"
         eurc_balance = "0"
@@ -189,31 +257,29 @@ def get_balance():
         
         for balance in balances:
 
-            # Saldo XLM (nativo)
+            # XLM Balance (native)
             if balance['asset_type'] == 'native':
                 xlm_balance = balance['balance']
 
-            # Saldo USDC (asset de código USDC)
+            # USDC Balance (asset de código USDC)
             elif balance['asset_code'] == 'USDC' or balance['asset_issuer'] == asset_issuer_usdt:
                 usdc_balance = balance['balance']
 
-            # Saldo EURC (asset de código EURC)
+            # EURC Balance (asset de código EURC)
             elif balance['asset_code'] == 'EURC' or balance['asset_issuer'] == asset_issuer_eurc:
                 eurc_balance = balance['balance']
 
-            # Saldo BRLC (asset de código BRLC)
+            # BRLC Balance (asset de código BRLC)
             elif balance['asset_code'] == 'BRLC' or balance['asset_issuer'] == asset_issuer_brl:
                 brlc_balance = balance['balance']
 
-        # Função para tratar a conversão de valores para float e lidar com erros
         def safe_float(value):
             try:
                 return f"{float(value):.2f}"
             
             except ValueError:
-                return "er"  # Retorna "er" em caso de erro
+                return "er" 
 
-        # Conversão dos saldos para float, com tratamento de erros
         xlm_balance = safe_float(xlm_balance)
         usdc_balance = safe_float(usdc_balance)
         eurc_balance = safe_float(eurc_balance)
@@ -222,7 +288,6 @@ def get_balance():
         return xlm_balance, usdc_balance, eurc_balance, brlc_balance
                 
     except NotFoundError:
-        # return "er", "er", "er", "er"
         return "er", "er", "er", "er"
     
     except Exception as e:
@@ -233,7 +298,6 @@ def get_keypair_and_seed(session, accounts):
     keypair = session.get('keypair')
     seed = session.get('seed')
 
-    # Atualiza keypair e seed se necessário
     if keypair:
         for account in accounts:
             if account['keypair'] == keypair:
@@ -243,20 +307,37 @@ def get_keypair_and_seed(session, accounts):
     return keypair, seed
 
 def handle_login(seed_phrase):
+    """
+    Handles user login using a seed phrase, Stellar secret key, or a password. This function checks 
+    if the input matches an existing account in the database or attempts to create a new session from 
+    the provided credentials. If the credentials are valid, user session data is set accordingly.
+
+    The function supports the following types of input for authentication:
+    - Exact match with a seed phrase, secret key, or password in the database.
+    - A 56-character Stellar secret key, which is then converted into a passphrase and associated data.
+    - A mnemonic-style passphrase, which is converted back to a Stellar secret key.
+
+    Args:
+        seed_phrase (str): A user-provided credential, which can be a seed phrase, 
+            a Stellar secret key (56 characters), or a known password.
+
+    Returns:
+        bool: True if login was successful, either by finding the account or generating new credentials;
+              False otherwise.
+    """
     session.clear()
     session.permanent = True
-    accounts = get_accounts_from_csv()
+    accounts = get_accounts_from_db()
     account_found = None
 
-    # Verificar se o seed_phrase corresponde a algum registro de conta
+    # Check if the seed_phrase matches any saved account
     for account in accounts:
-
         if account['seed_phrase'] == seed_phrase or account['seed'] == seed_phrase or account['password'] == seed_phrase:
             account_found = account
             break
 
-    # 🔹 Se a conta já existe, apenas preenche a sessão e retorna True
     if account_found:
+        # If account exists, update session with its data
         session.update({
             'logged_in': True,
             'keypair': account_found['keypair'],
@@ -273,19 +354,19 @@ def handle_login(seed_phrase):
             session['seed_phrase'] = seed_phrase
 
             if len(seed_phrase) == 56:
+                # Handle Stellar secret key input
                 secret_key = seed_phrase
                 secret_key_div2 = [seed_phrase[i:i+2] for i in range(0, len(seed_phrase), 2)]
                 passphrase_words = []
                 word_list = load_word_list('words_phrase.csv')
 
+                # Convert secret key into a passphrase using the word list
                 for pair in secret_key_div2:
                     match = next((item['word'] for item in word_list if item['letter'] == pair), None)
-
                     if match:
                         passphrase_words.append(match)
 
                     else:
-                        print(f"Par de letras não encontrado na word_list: {pair}")
                         session['seed_phrase'] = seed_phrase
                         passphrase_words = seed_phrase.split()
 
@@ -301,10 +382,12 @@ def handle_login(seed_phrase):
                 else:
                     print(f"Account {public_key} does not exist on the Stellar network.")
 
+                # Convert secret key to hexadecimal
                 secret_key_bytes = base64.b32decode(secret_key, casefold=True)
                 hexadecimal = binascii.hexlify(secret_key_bytes).decode()
                 password = ''.join([str(random.randint(0, 9)) for _ in range(5)])
 
+                # Store credentials in the session and database
                 session.update({
                     'logged_in': True,
                     'keypair': public_key,
@@ -314,22 +397,21 @@ def handle_login(seed_phrase):
                     'password': password
                 })
 
-                save_to_csv(public_key, secret_key, passphrase, hexadecimal, password)
+                save_wallet_to_db(public_key, secret_key, passphrase, hexadecimal, password)
 
             else:
-                # Caso seja uma passphrase
+                # Handle mnemonic passphrase input
                 passphrase = seed_phrase
                 words = passphrase.split()
                 letters = []
 
                 for word in words:
                     match = next((item['letter'] for item in word_list if item['word'] == word), None)
-
                     if match:
                         letters.append(match)
 
                     else:
-                        raise ValueError(f"Palavra não encontrada na word_list: {word}")
+                        raise ValueError(f"Word not found in word_list: {word}")
 
                 secret_key = ''.join(letters)
                 keypair = Keypair.from_secret(secret_key)
@@ -354,7 +436,7 @@ def handle_login(seed_phrase):
                 session['hexadecimal'] = hexadecimal
                 session['password'] = password
 
-                save_to_csv(public_key, secret_key, passphrase, hexadecimal, password)
+                save_wallet_to_db(public_key, secret_key, passphrase, hexadecimal, password)
 
             return True
 
@@ -397,9 +479,11 @@ def login_app():
     return render_template('login_app.html')
 
 def handle_main(is_app=False):
+    """
+    Function ...
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -407,7 +491,7 @@ def handle_main(is_app=False):
     keypair = session.get('keypair')
     seed = session.get('seed')
     #########################################
-    accounts = get_accounts_from_csv()
+    accounts = get_accounts_from_db()
     selected_keypair = request.args.get('selected_keypair') or request.form.get('selected_keypair')
 
     if selected_keypair:
@@ -444,9 +528,11 @@ def main_app():
     return handle_main(is_app=True)
 
 def handle_create_account(is_app=False):
+    """
+    Function ...
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-    
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -481,9 +567,11 @@ def create_account_app():
     return handle_create_account(is_app=True)
 
 def handle_account_data(is_app=False):
+    """
+    Function ...
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -506,11 +594,7 @@ def handle_account_data(is_app=False):
             trustlines = account_data_instance.trustlines
 
         else:
-            message = (
-                f"<br>"
-                f"Address or network not provided.<br>"
-                f"<br>"
-            )
+            message = (f"<br>Address or network not provided.<br>")
 
         return render_template('account_data_app.html' if is_app else 'account_data.html', message=message, keypair=keypair, 
             seed=seed, network=network, xlm_balance=xlm_balance, usdc_balance=usdc_balance, eurc_balance=eurc_balance, 
@@ -532,10 +616,18 @@ def account_data_app():
     return handle_account_data(is_app=True)
 
 def handle_forget_all(is_app=False):
+    """
+    Deletes all wallet data from the MongoDB collection and redirects to a confirmation page.
 
-    csv_file_path = 'wallet_data.csv'
-    open(csv_file_path, 'w').close()
-    session.clear()
+    Parameters:
+        is_app (bool): If True, redirects to the mobile app confirmation page.
+                       If False, redirects to the web confirmation page.
+
+    Returns:
+        Response: A Flask redirect response to the appropriate confirmation page.
+    """
+
+    wallet_data_collection.delete_many({})
 
     return redirect(url_for('forget_all_app.html' if is_app else 'forget_all.html'))
 
@@ -560,10 +652,13 @@ def logout_app():
     return redirect(url_for('login_app'))
 
 def handle_save_network(is_app=False):
+    """
+    Function ...
+    """
     network = GLOBAL_NETWORK
     session['network'] = network
 
-    return redirect(url_for('main_app.html' if is_app else 'main.html'))
+    return redirect(url_for('main_app' if is_app else 'main'))
 
 @app.route('/save_network', methods=['POST'])
 def save_network():
@@ -574,6 +669,9 @@ def save_network_app():
     return handle_save_network(is_app=True)
 
 def handle_generate_account(is_app=False):
+    """
+    Function ...
+    """
     if request.method == 'POST':
         password = request.json.get('password')
         public_key = session.get('public_key')
@@ -599,8 +697,11 @@ def generate_account_app():
     return handle_generate_account(is_app=True)
 
 def handle_select_account(is_app=False):
+    """
+    Function ...
+    """
     selected_keypair = request.form.get('selected_keypair')
-    accounts = get_accounts_from_csv()
+    accounts = get_accounts_from_db()
 
     for account in accounts:
 
@@ -609,7 +710,7 @@ def handle_select_account(is_app=False):
             session['seed'] = account['seed']
             session['seed_phrase'] = account['seed_phrase']
             session['hexadecimal'] = account['hexadecimal']
-            session['password'] = account.get('password', '')  # Adiciona a senha à sessão, se necessário
+            session['password'] = account.get('password', '') 
             break
 
     return redirect(url_for('main_app.html' if is_app else 'main.html'))
@@ -623,29 +724,24 @@ def select_account_app():
     return handle_select_account(is_app=True)
 
 def handle_forget_account(is_app=False):
+    """
+    Remove the selected Stellar account from the MongoDB database and session.
+    """
     selected_keypair = request.form.get('selected_keypair')
 
     if not selected_keypair:
         return "No account selected", 400
 
-    updated_accounts = []
-    file_path = 'wallet_data.csv'
-
-    with open(file_path, mode='r', newline='') as file:
-        reader = csv.reader(file)
-        for row in reader:
-
-            if row[0] != selected_keypair:
-                updated_accounts.append(row)
-
-    with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(updated_accounts)
+    # Remove from MongoDB
+    result_forget_Account = wallet_data_collection.delete_one({'keypair': selected_keypair})
 
     if session.get('keypair') == selected_keypair:
         session.clear()
 
-    return redirect(url_for('main_app.html' if is_app else 'main.html'))
+    if result_forget_Account.deleted_count == 0:
+        return "Account not found in database.", 404
+
+    return redirect(url_for('main_app' if is_app else 'main'))
 
 @app.route('/forget_account', methods=['POST'])
 def forget_account():
@@ -656,9 +752,11 @@ def forget_account_app():
     return handle_forget_account(is_app=True)
 
 def handle_buy(is_app=False):
+    """
+    Function ...
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -666,10 +764,19 @@ def handle_buy(is_app=False):
     keypair = session.get('keypair')
     seed = session.get('seed')
     #########################################
-    accounts = get_accounts_from_csv() 
+
+    accounts = get_accounts_from_db()
     qr_code_base64 = None
     message = None
     responsecopyandpaste = None
+
+    if request.method == 'GET':
+        message = request.args.get("message")
+        return render_template(
+            'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, xlm_balance=xlm_balance, 
+            usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, qr_code_base64=qr_code_base64, 
+            responsecopyandpaste=responsecopyandpaste
+            )
     
     if request.method == 'POST':
         buy_asset_code = request.form['buy_asset_code']
@@ -681,40 +788,66 @@ def handle_buy(is_app=False):
         card_name = request.form.get('card_name', None)
         buy_email = request.form.get('buy_email', None)
         buy_country = request.form.get('country', None)
-        description_buy = request.form.get('description_buy', None)
-        print(f"buy type: {buy_type}")
+        description_buy = request.form.get('description_buy_idnumber', None)
 
-        buy_instance = Buy(
-            network=network, keypair=keypair, seed=seed, 
-            buy_asset_code=buy_asset_code, buy_amount=buy_amount, 
-            address=address, accounts=accounts, xlm_balance=xlm_balance, 
-            usdc_balance=usdc_balance, eurc_balance=eurc_balance, 
-            brl_balance=brl_balance
-        )
+        try:  
+            if buy_type == "pix":
+                try:
+                    buy_instance = Buy(
+                        network=network, keypair=keypair, seed=seed, 
+                        buy_asset_code=buy_asset_code, buy_amount=buy_amount, 
+                        address=address, accounts=accounts, xlm_balance=xlm_balance, 
+                        usdc_balance=usdc_balance, eurc_balance=eurc_balance, 
+                        brl_balance=brl_balance
+                    )
 
-        if buy_type == "PIX":
-            qr_code_base64, message, responsecopyandpaste = buy_instance.generate_pix_code(
-                buy_name=buy_name, buy_idnumber=buy_idnumber, buy_type=buy_type, description_buy=description_buy
-            )
+                    qr_code_base64, message, responsecopyandpaste = buy_instance.generate_pix_code(
+                        buy_name=buy_name, buy_idnumber=buy_idnumber, buy_type=buy_type, description_buy=description_buy
+                    )
+                
+                except Exception as e:
+                    message = (f"<br>Error creating PIX charge: {str(e)}<br>")
 
-        elif buy_type == "CreditCard":
-            message = buy_instance.generate_stripe_charge(
-                buy_name=buy_name, buy_idnumber=buy_idnumber, buy_type=buy_type, card_name=card_name, buy_email=buy_email, buy_country=buy_country, description_buy=description_buy
-            )
+                    return render_template(
+                    'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, 
+                    buy_asset_code=buy_asset_code, buy_amount=buy_amount, address=address, accounts=accounts, xlm_balance=xlm_balance, 
+                    usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, qr_code_base64=qr_code_base64, 
+                    responsecopyandpaste=responsecopyandpaste
+                    )
 
-        if not buy_amount and not message:
-            message = (
-                f"<br>"
-                f"Error generating payment URL.<br>"
-                f"<br>"
-            )
+            elif buy_type == "credit_card":
+                try:
+                    buy_instance = Buy(
+                        network=network, keypair=keypair, seed=seed, 
+                        buy_asset_code=buy_asset_code, buy_amount=buy_amount, 
+                        address=address, accounts=accounts, xlm_balance=xlm_balance, 
+                        usdc_balance=usdc_balance, eurc_balance=eurc_balance, 
+                        brl_balance=brl_balance
+                    )
+                            
+                    message = buy_instance.generate_stripe_charge(
+                        buy_name=buy_name, buy_idnumber=buy_idnumber, buy_type=buy_type, card_name=card_name, buy_email=buy_email, buy_country=buy_country, description_buy=description_buy
+                    )
 
+                except Exception as e:
+                    message = (f"<br>Error creating Credit Card charge: {str(e)}<br>")
+
+                    return render_template(
+                    'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, 
+                    buy_asset_code=buy_asset_code, buy_amount=buy_amount, address=address, accounts=accounts, xlm_balance=xlm_balance, 
+                    usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, qr_code_base64=qr_code_base64, 
+                    responsecopyandpaste=responsecopyandpaste
+                    )
+
+        except Exception as e:
+            message = (f"<br>Error.<br>")
+        
             return render_template(
-                'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, 
-                buy_asset_code=buy_asset_code, buy_amount=buy_amount, address=address, accounts=accounts, xlm_balance=xlm_balance, 
-                usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, qr_code_base64=qr_code_base64, 
-                responsecopyandpaste=responsecopyandpaste
-                )
+                    'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, 
+                    buy_asset_code=buy_asset_code, buy_amount=buy_amount, address=address, accounts=accounts, xlm_balance=xlm_balance, 
+                    usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, qr_code_base64=qr_code_base64, 
+                    responsecopyandpaste=responsecopyandpaste
+                    )
 
     return render_template(
         'buy_app.html' if is_app else 'buy.html', message=message, network=network, keypair=keypair, seed=seed, xlm_balance=xlm_balance, 
@@ -731,9 +864,11 @@ def buy_app():
     return handle_buy(is_app=True)
 
 def handle_transaction(is_app=False):
+    """
+    Function ...
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -758,11 +893,7 @@ def handle_transaction(is_app=False):
             message = transaction_instance.execute()
 
         else:
-            message = (
-                f"<br>"
-                f"Address or network not provided.<br>"
-                f"<br>"
-            )
+            message = (f"<br>Address or network not provided.<br>")
 
         return render_template(
             'transaction_app.html' if is_app else 'transaction.html', message=message, network=network, keypair=keypair, seed=seed, 
@@ -777,18 +908,98 @@ def handle_transaction(is_app=False):
         destination_account=request.args.get('destination_account', ''), amount_sell=request.args.get('amount_sell', '')
         )
 
-@app.route('/transaction', methods=['GET', 'POST'])
+@app.route('/transaction', methods=['GET', 'POST'], strict_slashes=False)
 def transaction():
     return handle_transaction(is_app=False)
 
-@app.route('/transaction_app', methods=['GET', 'POST'])
+@app.route('/transaction_app', methods=['GET', 'POST'], strict_slashes=False)
 def transaction_app():
     return handle_transaction(is_app=True)
 
-def handle_withdraw(is_app=False):
+def handle_update_taxes_transaction(is_app=False):
+    """
+    Handle the calculation of transaction fees for a given asset and amount.
+    This function retrieves the fee settings from MongoDB, calculates both
+    percentage-based and fixed fees, and returns the final amount after fees.
+
+    Parameters:
+    - is_app (bool): If True, the request is coming from the mobile app version.
+    
+    Returns:
+    - JSON response containing the calculated fees and final amount,
+      or an error message if something goes wrong.
+    """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
+    ########## Common Session Data ##########
+    session['network'] = GLOBAL_NETWORK
+    network = session['network']
+    xlm_balance, usdc_balance, eurc_balance, brl_balance = get_balance()
+    keypair = session.get('keypair')
+    seed = session.get('seed')
+    #########################################
 
+    try:
+        # Parse JSON data sent in the request
+        data = request.json
+        amount = Decimal(data.get("amount", "0"))
+        asset_code = data.get("sender_asset_code")
+        receiver_asset_code = data.get("receiver_asset_code")
+
+        # ======= Retrieve fee settings directly from MongoDB =======
+        data_db_withdraw = client["withdrawpocketblock"]
+        settings_collection = data_db_withdraw["settings_value_fiat"]
+
+        # Select the fee settings based on the asset code
+        if asset_code == "USDC" and receiver_asset_code == "USDC":
+            settings_usd = settings_collection.find_one({"withdraw_type": "USD"})
+            perc_fee = Decimal(settings_usd["fee"])
+            usd_value_sender = Decimal(settings_usd["value"])
+            usd_value_receiver = Decimal(settings_usd["value"])
+
+        elif asset_code == "EURC" and receiver_asset_code == "EURC":
+            settings_eur = settings_collection.find_one({"withdraw_type": "EUR"})
+            perc_fee = Decimal(settings_eur["fee"])
+            eur_value_sender = Decimal(settings_eur["value"])
+            eur_value_receiver = Decimal(settings_eur["value"])
+
+        else:
+            # If the asset is not supported, return a JSON error response
+            return jsonify({"success": False, "error": "Asset não suportado"}), 400
+        # ===========================================================
+
+        # Calculate the fees
+        fee_percent_amount = (amount * perc_fee) # Fee based on percentage
+        final_amount = amount + fee_percent_amount # Amount remaining after deducting total fee
+
+        # Return a JSON response with all fee details and final amount
+        return jsonify({
+            "success": True,
+            "asset": asset_code,
+            "amount": str(amount),
+            "fee_percent": str(perc_fee),
+            "amount_fee": str(fee_percent_amount),
+            "final_amount": str(final_amount)
+        })
+
+    except Exception as e:
+        # Catch any unexpected errors and return a JSON error response
+        return jsonify({"success": False, "error": f"Erro interno: {e}"}), 500  
+
+@app.route('/update-taxes-transaction', methods=['GET', 'POST'], strict_slashes=False)
+def update_taxes_transactiontransaction():
+    return handle_update_taxes_transaction(is_app=False)
+
+@app.route('/update-taxes-transaction_app', methods=['GET', 'POST'], strict_slashes=False)
+def update_taxes_transactiontransaction_app():
+    return handle_update_taxes_transaction(is_app=True)
+
+def handle_withdraw(is_app=False):
+    """
+    Function ...
+    """
+    if not session.get('logged_in'):
+        return redirect(url_for('login_app' if is_app else 'login'))
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -862,12 +1073,10 @@ def withdraw_app():
 
 def handle_receive(is_app=False):
     """
-    Função principal para processar o recebimento de ativos.
-    :param is_app: Booleano que indica se é um aplicativo ou versão web.
+    Function ...
     """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -892,12 +1101,8 @@ def handle_receive(is_app=False):
         text_memo = None
 
         if not asset_code or not amount_receive:
-            # Garantindo que os dados sejam fornecidos
-            message = (
-                f"<br>"
-                f" The asset code or the amount to be received was not provided.<br>"
-                f"<br>"
-            )
+
+            message = (f"<br>The asset code or the amount to be received was not provided.<br>")
             
             return render_template(
                 'receive_app.html' if is_app else 'receive.html', message=message, keypair=keypair, seed=seed, network=network, 
@@ -913,22 +1118,20 @@ def handle_receive(is_app=False):
         qr_code_base64=qr_code_base64, qr_data=qr_data
         )
 
-@app.route('/receive', methods=['GET', 'POST'])
+@app.route('/receive', methods=['GET', 'POST'], strict_slashes=False)
 def receive():
     return handle_receive(is_app=False)
 
-@app.route('/receive_app', methods=['GET', 'POST'])
+@app.route('/receive_app', methods=['GET', 'POST'], strict_slashes=False)
 def receive_app():
     return handle_receive(is_app=True)
 
 def handle_settings(is_app=False):
     """
-    Função principal para processar as configurações do usuário.
-    :param is_app: Booleano que indica se é um aplicativo ou versão web.
+    Function ...
     """
     if not session.get('logged_in'):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -943,8 +1146,10 @@ def handle_settings(is_app=False):
         settings = {
             "name": existing_user.get("name", ""),
             "email": existing_user.get("email", ""),
+            "idnumber": existing_user.get("idnumber", ""),
             "phone_number": existing_user.get("phone_number", ""),
             "resaddress": existing_user.get("resaddress", ""),
+            "country": existing_user.get("country", ""),
         }
 
     else:
@@ -956,10 +1161,11 @@ def handle_settings(is_app=False):
         email = request.form.get('email_settings')
         phone_number = request.form.get('phone_settings')
         resaddress = request.form.get('address_settings')
+        country = request.form.get('country_settings')
 
         try:
 
-            if keypair and name and idnumber and email and phone_number and resaddress:
+            if keypair and name and idnumber and email and phone_number and resaddress and country:
 
                 existing_user = data_collection.find_one({"keypair": keypair})
 
@@ -972,16 +1178,14 @@ def handle_settings(is_app=False):
                         "email": email,
                         "phone_number": phone_number,
                         "resaddress": resaddress,
+                        "country": country,
                         "user": "activated",
                         "settings_datetime": datetime.datetime.utcnow()
                     }
 
                     data_collection.update_one({"keypair": keypair}, {"$set": user_data})
 
-                    message = (
-                        f"Data saved successfuly.<br>"
-                        f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-                        )
+                    message = (f"<br>Data saved successfuly.<br>")
 
                 else:
                     source_secret = os.getenv("MAINNET_FUNDER_SECRET")
@@ -992,16 +1196,12 @@ def handle_settings(is_app=False):
                     network_passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
                     server = Server(horizon_url=horizon_url)
                     source_account = server.load_account(account_id=source_public)
+                    source_account_clean = source_account.split("#")[0].strip()
 
-                    print(source_secret)
-                    print(source_keypair)
-                    print(source_public)
-                    print(source_account)
-
-                    # Make a transaction of 2.5 XLM toi activate the account
+                    # Make a transaction of 2.5 XLM to activate the account
                     transaction = (
                         TransactionBuilder(
-                            source_account=source_account,
+                            source_account=source_account_clean,
                             network_passphrase=network_passphrase,
                             base_fee=100
                         )
@@ -1017,7 +1217,6 @@ def handle_settings(is_app=False):
 
                     transaction.sign(source_keypair)
                     response = server.submit_transaction(transaction)
-                    print(response)
 
                     # Verifica se a transação foi bem-sucedida antes de salvar no MongoDB
                     if response and response.get("successful", False):
@@ -1028,17 +1227,14 @@ def handle_settings(is_app=False):
                             "email": email,
                             "phone_number": phone_number,
                             "resaddress": resaddress,
+                            "country": country,
                             "user": "activated",
                             "settings_datetime": datetime.datetime.utcnow()
                         }
 
                         data_collection.insert_one(user_data)
 
-                        message = (
-                            f"Data saved successfuly.<br>"
-                            f"account activated.<br>"
-                            f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-                            )
+                        message = (f"Data saved successfuly.<br>Account activated.<br>")
 
                     else:
 
@@ -1049,23 +1245,17 @@ def handle_settings(is_app=False):
                             "email": email,
                             "phone_number": phone_number,
                             "resaddress": resaddress,
+                            "country": country,
                             "user": "desactivated",
                             "settings_datetime": datetime.datetime.utcnow()
                         }
 
                         data_collection.insert_one(user_data)
 
-                        message = (
-                            f"Data saved successfuly, but account is not acctivated yet!<br>"
-                            f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-                            )  
+                        message = (f"Data saved successfuly, but account is not acctivated yet!<br>")  
             
             else:
-                print("Please fill in all fields before saving.")
-                message = (
-                    f"Please fill in all fields before saving.<br>"
-                    f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-                )
+                message = (f"Please fill in all fields before saving.<br>" )
 
             return render_template('settings_app.html' if is_app else 'settings.html', message=message, keypair=keypair, seed=seed, network=network, 
                     xlm_balance=xlm_balance, usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, 
@@ -1073,11 +1263,7 @@ def handle_settings(is_app=False):
                     )
         
         except Exception as e:
-            print("Error during transaction - check your transaction parameters: ", e)
-            message = (
-                f"Error during transaction - check your transaction parameters.<br>"
-                f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
-                )
+            message = (f"Error during transaction. Check your transaction parameters.<br>")
             
             return render_template('settings_app.html' if is_app else 'settings.html', message=message, keypair=keypair, seed=seed, network=network, 
                 xlm_balance=xlm_balance, usdc_balance=usdc_balance, eurc_balance=eurc_balance, brl_balance=brl_balance, 
@@ -1110,79 +1296,97 @@ def home_app():
 @app.route('/create_trustline', methods=['POST'])
 def create_trustline():
     try:
-        seed = session.get('seed')
-        keypair = session.get('keypair')
-        session['network'] = GLOBAL_NETWORK
-        network = session['network']
-        data = request.json
-        asset = data.get('asset')
-
-        secret_key = session.get('seed')
+        secret_key = session.get('seed') # Retrieve the user's Stellar secret key from the session
         if not secret_key:
-            print(f"Chave secreta não encontrada na sessão")
-            raise ValueError("A chave secreta não foi fornecida.")
-            # return jsonify({'success': False, 'message': 'Chave secreta não encontrada na sessão'}), 400
+            return jsonify({'success': False, 'message': 'Secret key error.'}), 400
+        
+        data = request.json # Get the asset data sent in the JSON body of the request
+        asset_code  = data.get('asset')
+        if not asset_code:
+            return jsonify({'success': False, 'message': 'Asset code error.'}), 400
 
-        if asset == 'USDC':
-            asset_issuer = os.getenv("USDC_ADDRESS")
-        elif asset == 'EURC':
-            asset_issuer = os.getenv("EURC_ADDRESS")
-        else:
-            message = (
-                    f"<br>"
-                    f" Sender asset invalid.<br>"
-                    f"<br>"
+        if secret_key and asset_code: # Determine the correct issuer address based on asset type
+            if asset_code == 'USDC':
+                asset_issuer = os.getenv("USDC_ADDRESS")
+            elif asset_code == 'EURC':
+                asset_issuer = os.getenv("EURC_ADDRESS")
+            else:
+                return jsonify({'success': False, 'message': 'Invalid asset code.'}), 400
+
+            if not asset_issuer.startswith("G") or len(asset_issuer) != 56: # Validate the issuer public key format
+                return jsonify({'success': False, 'message': 'Invalid issuer public key.'}), 400
+
+            try:
+                # Load the user's keypair and public key
+                keypair = Keypair.from_secret(secret_key)
+                public_key = keypair.public_key
+                server = Server(horizon_url=HORIZON_URL)
+                network_passphrase = Network.PUBLIC_NETWORK_PASSPHRASE # network_passphrase = Network.TESTNET_NETWORK_PASSPHRASE
+                account = server.accounts().account_id(public_key).call() # Load the user's account to get current balances
+                balances = account.get('balances', [])
+                existing_trustlines = sum(1 for b in balances if b['asset_type'] != 'native') # Count how many trustlines already exist (non-native assets)
+                native_balance = 0 # Get the native XLM balance
+                
+                for b in balances:
+                    if b['asset_type'] == 'native':
+                        native_balance = float(b['balance'])
+                        break
+
+                # Calculate minimum balance required for the new trustline
+                base_reserve = 0.5  # Each trustline requires 0.5 XLM
+                num_entries = existing_trustlines + 1  # Adding 1 for the new trustline
+                min_balance_required = 1 + (num_entries * base_reserve)  # 1 XLM base + 0.5 XLM per entry
+
+                # Check if the account has enough XLM to support the new trustline
+                if native_balance < min_balance_required:
+                    print(f"Insufficient balance to create trustline. Minimum required: {min_balance_required:.2f} XLM, current: {native_balance:.2f} XLM.")
+                    return jsonify({
+                        'success': False,
+                        'message': f'Insufficient balance to create trustline.'
+                    }), 400 # Minimum required: {min_balance_required:.2f} XLM, current: {native_balance:.2f} XLM.
+
+                # Build the transaction to create the trustline
+                source_account = server.load_account(public_key)
+                asset_obj = Asset(code=asset_code, issuer=asset_issuer)
+                
+                transaction = (
+                    TransactionBuilder(
+                        source_account=source_account,
+                        network_passphrase=network_passphrase,
+                        base_fee=100
+                    )
+                    .append_change_trust_op(asset=asset_obj)
+                    .set_timeout(30)
+                    .build()
                 )
-            return message       
 
-        try:
-            keypair = Keypair.from_secret(secret_key)
+                # Sign and submit the transaction
+                transaction.sign(keypair)
+                response = server.submit_transaction(transaction)
+                return jsonify({'success': True, 'message': 'Trustline created'}), 200
 
-        except Ed25519SecretSeedInvalidError:
-            raise ValueError("A chave secreta fornecida é inválida.")
-
-        keypair = Keypair.from_secret(secret_key)
-        public_key = keypair.public_key
-        horizon_url = HORIZON_URL
-        # network_passphrase = Network.TESTNET_NETWORK_PASSPHRASE
-        network_passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
-        server = Server(horizon_url=horizon_url)
-        source_account = server.load_account(public_key)
-        asset = Asset(asset, asset_issuer)
-
-        transaction = (
-            TransactionBuilder(
-                source_account=source_account,
-                network_passphrase=network_passphrase,
-                base_fee=100
-            )
-            .append_change_trust_op(asset=asset)
-            .set_timeout(30)
-            .build()
-        )
-
-        transaction.sign(keypair)
-
-        response = server.submit_transaction(transaction)
-        return jsonify({'success': True, 'message': 'Trustline created'}), 200
+            # Handle specific error if the secret key is invalid
+            except Ed25519SecretSeedInvalidError:
+                message = ("<br>Invalid secret key.<br>")
+                return message
+            
+            # Handle any unexpected error
+            except Exception as e:
+                return f"<br>Unexpected error: {str(e)}<br>"
 
     except Exception as e:
         if hasattr(e, 'extras'):
-            print(f"Erro Horizon")
             print(json.dumps(e.extras, indent=2))
             return jsonify({'success': False, 'message': 'Erro Horizon', 'details': e.extras}), 500
         
-        print(f"Error: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 def handle_help(is_app=False):
     """
-    Função principal para processar a página de ajuda.
-    :param is_app: Booleano que indica se é um aplicativo ou versão web.
+    Function ...
     """
     if not session.get('logged_in', False):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -1219,30 +1423,21 @@ def handle_help(is_app=False):
 
                 ticket_collection.insert_one(ticket_data)
 
-                print("Ticket registred.")
                 message = (
-                f"<br>"
-                f"Ticket registred.<br>"
-                f"<br>"
-                f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
+                f"<br>Ticket registred.<br>"
+                f"<br><button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
                 )
 
             else:
-                print("No account found.")
                 message = (
-                f"<br>"
-                f"No account found.<br>"
-                f"<br>"
-                f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
+                f"<br>No account found.<br>"
+                f"<br><button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
                 )
 
         except Exception as e:
-            print("Error during open ticket.", e)
             message = (
-                f"<br>"
-                f"Error during open ticket.<br>"
-                f"<br>"
-                f"<button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
+                f"<br>Error during open ticket.<br>"
+                f"<br><button id='closeNotificationBtn' onclick='closeNotification()'><i class='fas fa-times'></i> Fechar</button>"
                 )
             
         return render_template('help_app.html' if is_app else 'help.html', message=message, keypair=keypair, seed=seed, network=network)
@@ -1262,12 +1457,10 @@ def help_app():
 
 def handle_support(is_app=False):
     """
-    Função principal para processar a página de suporte.
-    :param is_app: Booleano que indica se é um aplicativo ou versão web.
+    Function ...
     """
     if not session.get('logged_in', False):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -1297,12 +1490,10 @@ def support_app():
 
 def handle_faq(is_app=False):
     """
-    Função principal para processar a página de faq.
-    :param is_app: Booleano que indica se é um aplicativo ou versão web.
+    Function ...
     """
     if not session.get('logged_in', False):
         return redirect(url_for('login_app' if is_app else 'login'))
-        
     ########## Common Session Data ##########
     session['network'] = GLOBAL_NETWORK
     network = session['network']
@@ -1330,6 +1521,21 @@ def faq_app():
 
 @app.route('/get_stripe_public_key')
 def get_stripe_public_key():
+    """
+    Return the Stripe public key used for client-side Stripe.js initialization.
+
+    Returns:
+        Response: JSON object with the Stripe publishable key.
+
+        Example:
+            {
+                "stripe_public_key": "pk_test_XXXXXXXXXXXXXXXXXXXX"
+            }
+
+    Notes:
+        - The public key is read from the environment variable STRIPE_PUB_KEY.
+        - This route is typically used by the frontend to configure Stripe.
+    """
     return jsonify({'stripe_public_key': os.getenv('STRIPE_PUB_KEY')})
 
 @app.route("/webhook", methods=["GET", "POST"])
@@ -1341,15 +1547,12 @@ def webhook():
         data = request.json
 
         if not data:
-            print("Requisição inválida: corpo vazio.")
-            return jsonify({"error": "Requisição inválida"}), 400  
+            return jsonify({"error": "Invalid request"}), 400  
 
-        print(f"Dados recebidos no webhook: {data}")
         return jsonify({"status": "OK"}), 200
 
     except Exception as e:
-        print(f"[WEBHOOK]|[ERROR] - Erro no webhook: {str(e)}")
-        return jsonify({"error": "Erro interno"}), 500
+        return jsonify({"error": "Internal error"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
