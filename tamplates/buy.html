@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Buy</title>
+        <script src="https://js.stripe.com/v3/"></script>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock - Buy">
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .general {
+                padding: 20px;
+                margin-top: 20px;
+                background-color: var(--cor-cinza);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%; 
+                max-width: 800px; 
+                box-sizing: border-box; 
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+
+            p {
+                font-size: 16px;
+                margin-bottom: 10px;
+                color: var(--cor-preto);
+            }
+
+            .address-secret {
+                background-color: var(--cor-amarelo);
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+                width: 100%;
+            }
+
+            form {
+                background-color: var(--cor-cinza);
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 800px;
+                margin-bottom: 10px;
+            }
+
+            label {
+                color: var(--cor-preto);
+                margin-bottom: 5px;
+            }
+
+            .text-label {
+                font-size: 12px;
+                color: var(--cor-balance-label);
+                margin-left: 8px;
+            }
+
+            input[type="number"] {
+                width: calc(200px - 22px); 
+                padding: 10px;
+                margin-bottom: 10px; 
+                border: 1px solid var(--cor-preto);
+                text-align: left;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+                box-sizing: border-box;
+            }
+
+            input[type="text"] {
+                width: calc(200px - 22px); 
+                padding: 10px;
+                margin-bottom: 10px; 
+                border: 1px solid var(--cor-preto);
+                text-align: left;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+                box-sizing: border-box;
+            }
+
+            input[type="email"] {
+                width: calc(200px - 22px); 
+                padding: 10px;
+                margin-bottom: 10px; 
+                border: 1px solid var(--cor-preto);
+                text-align: left;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            textarea {
+                width: calc(200px - 22px);
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                text-align: left;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                width: 200px;
+                height: 40px; 
+                text-align: center;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            #openmenu {
+                position: fixed; 
+                top: 80px; 
+                left: 20px;
+                padding: 10px 15px;
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #openmenu:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar {
+                width: 75px;
+                height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                background-color: #333;
+                color: var(--cor-balance-label);
+                overflow-x: hidden;
+                transition: 0.3s;
+                padding-top: 20px;
+                z-index: 1000;
+            }
+
+            .sidebar.active {
+                width: 300px;
+            }
+
+            .sidebar button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                background-color: transparent;
+                border: none;
+                color: var(--cor-balance-label);
+                width: 275px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            .sidebar .close-button {
+                background-color: var(--cor-amarelo-escuro);
+                color: black; 
+            }
+
+            .sidebar .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar:not(.active) button {
+                width: 55px;
+            }
+
+            .sidebar:not(.active) .menu-text {
+                display: none;
+            }
+
+            .sidebar button i {
+                margin-right: 8px;
+            }
+
+            .sidebar form {
+                margin: 0;
+            }
+
+            .info-balance {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .info-item {
+                display: flex;
+                align-items: center;
+            }
+
+            .close-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .openmenu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .openmenu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .logout-button, .back-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .logout-button:hover, .back-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .notification {
+                display: none;
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                padding: 10px;
+                border-radius: 5px;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                z-index: 1000;
+            }
+
+            select {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                width: 200px;
+                margin-bottom: 10px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                text-align: center;
+            }
+
+            #withdraw_asset_code {
+                width: 200px;
+            }
+
+            .form-container {
+                display: flex; 
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                margin-right: 20px;
+                margin-left: 20px;
+            }
+
+            .form-group label {
+                margin-bottom: 5px;
+            }
+
+            .notification-message {
+                position: fixed;
+                top: 10%;
+                left: 50%;
+                transform: translate(-50%, -10%);
+                background-color: rgba(255, 255, 0, 0.9);
+                color: black;
+                padding: 10px 20px;
+                border-radius: 5px;
+                display: none;
+                font-size: 16px;
+                z-index: 1001;
+                width: 700px;
+                text-align: center;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingSpinner {
+                border: 8px solid var(--cor-cinza);
+                border-top: 8px solid var(--cor-amarelo);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px; 
+                position: relative;
+                width: 420px;
+                height: 60px; 
+                overflow: visible;
+                box-sizing: border-box;
+            }
+
+            .container img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover; 
+            }
+
+            .container span {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 300px;
+                height: 60px;
+                text-align: center; 
+            }
+
+            .container .dropdown {
+                width: 100px;
+                height: 60px;
+                position: relative;
+            }
+
+            .container button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 30px;
+                width: 100px;
+                text-align: center;
+            }
+
+            .icon {
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown-content {
+                background-color: var(--cor-cinza-claro);
+                border-radius: 5px;
+                padding: 10px;
+                list-style-type: none;
+                margin: 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                position: absolute;
+                z-index: 1;
+                width: 150px;
+                top: 45px;
+            }
+
+            .dropdown-content li {
+                padding: 10px;
+                color: var(--cor-preto);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .dropdown-content li:hover {
+                background-color: var(--cor-amarelo-escuro);
+                color: #fff;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .xlm-balance-dropdown, .usdc-balance-dropdown, .eurc-balance-dropdown, .brl-balance-dropdown {
+                font-weight: bold;
+                margin-left: 10px;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                transition: background-color 0.3s ease;
+            }
+
+            .dropdown button:hover {
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+            }
+
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .balance-value {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .three-dots-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 5px 10px;
+                font-size: 16px;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .message {
+                position: fixed;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                width: 700px;
+                text-align: center;
+                margin: 0 auto;
+                background-color: var(--cor-amarelo);
+                padding: 10px;
+                border-radius: 5px;
+                color: var(--cor-preto);
+                overflow-y: auto;
+                max-height: 700px;
+                display: none;
+                z-index: 999;
+            }
+
+            .xlm-label {
+                color: var(--cor-balance-label); 
+                font-size: 12px; 
+            }
+
+            .usdc-label {
+                color: var(--cor-balance-label);
+                font-size: 12px;
+            }
+
+            .eurc-label {
+                color: var(--cor-balance-label);
+                font-size: 12px; 
+            }
+
+            .brl-label {
+                color: var(--cor-balance-label);
+                font-size: 12px;
+            }
+
+            #buy_name,
+            #card_name,
+            #buy_email,
+            #buy_idnumber {
+                width: 420px;
+            }
+
+            #description_buy_idnumber {
+                width: 600px;
+                height: 100px;
+                word-wrap: break-word;
+                white-space: normal;
+                padding: 8px;
+                resize: vertical;
+            }
+
+            .header {
+                width: 100%;
+                background-color: var(--cor-header);
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: var(--cor-preto);
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header .app-name {
+                font-size: 24px;
+                margin-left: 70px;
+            }
+
+            .help-icon {
+                background-color: var(--button-bg-color); 
+                color: var(--button-text-color);
+                border: none;
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .help-icon a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .help-icon:hover {
+                background-color: var(--button-hover-bg-color);
+            }
+
+            .notification-button {
+                margin-top: 10px;
+                padding: 8px 15px;
+                background-color: var(--cor-header);
+                color: black;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center; 
+                gap: 8px; 
+                width: auto; 
+            }
+
+            .notification-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo-escuro);
+            }
+
+            .card-box {
+                width: 400px;
+                background-color: #f8f8f8;
+                padding: 20px;
+                margin: 0 0px 10px 0px;
+                border-radius: 15px;
+                box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                text-align: left;
+            }
+
+            .input-medium {
+                width: 450px;
+            }
+
+            .input-small {
+                width: 450px;
+            }
+
+            .input-wide {
+                width: 450px;
+            }
+
+            #creditcardFields_name {
+                display: flex;
+                flex-direction: column;
+                align-items: center; 
+                width: 100%;
+            }
+
+        </style>
+
+    </head>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+    <body>
+
+        <header class="header">
+            <div class="app-name">PocketBlock</div>
+            <button class="help-icon">
+                <a href="{{ url_for('help') }}"><i class="fas fa-question-circle"></i></a>
+            </button>
+        </header>
+
+        <div id="loadingOverlay">
+            <div id="loadingSpinner"></div>
+        </div>
+
+        <!-- Background overlay (used for modals and loading) -->
+        <div id="overlay" class="overlay"></div>
+
+        <!-- Message notification box (appears when an alert or info is triggered) -->
+        <div id="messageNotification" class="notification-message"></div>
+
+        <!-- Sidebar menu -->
+        <div id="sidebar" class="sidebar">
+            <!-- Close menu -->
+            <button id="close" type="button" class="close-button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+                <span class="menu-text">Menu</span>
+            </button>
+            <!-- Main -->
+            <button class="back-button" onclick="showLoading(); location.href='{{ url_for('main') }}'" type="button">
+                <i class="fas fa-arrow-left"></i>
+                <span class="menu-text">Back</span>
+            </button>
+            <!-- Logout -->
+            <button id="logoutBtn" class="logout-button" onclick="handleLogout()" type="button">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="menu-text">Logout</span>
+            </button>
+        </div>
+
+            <form id="general" class="general" method="POST" action="{{ url_for('select_account') }}" onsubmit="showLoading()">
+                <h1>Buy</h1>
+
+                <div class="info-block">
+                    <p class="address-secret"><strong>Address:</strong> {{ keypair }} </p>
+                    <p class="address-secret"><strong>Secret Key:</strong> {{ seed[:3] }}{{ '*' * 50 }}{{ seed[-3:] }} </p>
+                </div>
+
+                <div class="container">
+                    <img id="asset-icon" class="icon" src="{{ url_for('static', filename='usdccoin.svg') }}" alt="Ativo">
+                    <span class="balance-value" id="asset-balance"><strong>{{ usdc_balance }}</strong></span>
+                    <div class="dropdown">
+                        <button class="three-dots-button">...</button>
+                        <ul class="dropdown-content">
+                            <li onclick="changeAsset('USDC', '{{ url_for('static', filename='usdccoin.svg') }}', {{ usdc_balance }})">
+                                USDC
+                            </li>
+                            <li onclick="changeAsset('EURC', '{{ url_for('static', filename='eurccoin.svg') }}', {{ eurc_balance }})">
+                                EURC
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </form>
+
+            <form id="buyForm" class="general" method="POST">
+                <div class="form-container">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_type">Choose Payment Method</label>
+                        </div>
+                        <select id="buy_type" name="buy_type" required onchange="togglePaymentFields()">
+                            <option value="credit_card">Credit Card</option>
+                            <option value="pix">PIX</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_amount">Amount buy</label>
+                        </div>
+                        <input type="number" id="buy_amount" name="buy_amount" step="0.01" min="0" placeholder="100.00" required>
+                    </div>
+        
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_asset_code">Asset buy</label>
+                        </div>
+                        <select id="buy_asset_code" name="buy_asset_code" required>
+                            <option value="USDC">USDC</option>
+                            <option value="EURC">EURC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_name">Name</label>
+                        </div>
+                        <input type="text" id="buy_name" name="buy_name" placeholder="Jhon Brady" required
+                        pattern="[A-Za-z\s]+" title="Name must contain only letters and spaces">
+                    </div>
+                </div>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_idnumber">ID number</label>
+                        </div>
+                        <input type="number" id="buy_idnumber" name="buy_idnumber" placeholder="00000000000" required>
+                    </div>
+                </div>
+
+                <div id="creditCardFields">
+                    <div class="form-container" id="creditcardFields_info">
+                        <div class="form-group">
+                            <div class="text-label">
+                                <label for="buy_creditcartinfo">Credit Card Information</label>
+                            </div>
+                            <div class="card-box">
+                                <div id="card-element">
+                                    <!-- Stripe element for the card number -->
+                                </div>
+                                <div id="card-errors" role="alert"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-container" id="creditcardFields_name">
+                        <div class="form-group">
+                            <div class="text-label">
+                                <label for="card_name">Cardholder Name</label>
+                            </div>
+                            <input type="text" id="card_name" name="card_name" placeholder="Jhon Brady">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-container" id="creditcardFields_email">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="buy_email">E-mail</label>
+                        </div>
+                        <input type="email" id="buy_email" name="buy_email" placeholder="jhon_brady@email.com">
+                    </div>
+                </div>
+
+                <div class="form-container" id="buy_country">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="country">Country or Region</label>
+                        </div>
+                        <select id="country" name="country">
+                            <option value="BR">Brazil</option>
+                            <option value="US">United States</option>
+                            <option value="PT">Portugal</option>
+                            <option value="ES">Spain</option>
+                            <option value="FR">France</option>
+                            <option value="DE">Germany</option>
+                            <option value="NA">Another</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-container">
+                    <div class="form-group">
+                        <div class="text-label">
+                            <label for="description_buy_idnumber">Description</label>
+                        </div>
+                        <textarea id="description_buy_idnumber" name="description_buy_idnumber" placeholder="Payment to buy USDC" required></textarea>
+                    </div>
+                </div>
+
+                <button id="buy-button" type="submit" value="Buy">Buy</button>
+
+                <input type="hidden" name="payment_method_id" id="payment-method-id">
+
+            </form>
+
+        <script>
+
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+
+            // Clears form fields on page load
+            window.onload = function() {
+                document.getElementById("general").reset();
+                document.getElementById("buyForm").reset();
+            };
+
+            // Toggle the sidebar menu
+            function toggleSidebar() {
+                document.getElementById("sidebar").classList.toggle("active");
+                document.querySelector(".content").classList.toggle("active");
+            }
+
+            // Close the sidebar when clicking outside of it
+            window.addEventListener('click', function(event) {
+                var sidebar = document.getElementById('sidebar');
+                var openMenuButton = document.getElementById('openmenu');
+                    
+                // Check if the click was outside the sidebar and menu button
+                if (!sidebar.contains(event.target) && !openMenuButton.contains(event.target)) {
+                    sidebar.classList.remove("active");
+                    document.querySelector(".content").classList.remove("active");
+                }
+            });
+
+            // Show loading overlay screen
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            // Handle logout and show loading overlay before redirect
+            function handleLogout() {
+                showLoading(); // Display the loading screen
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            }
+
+             // Show loading overlay when the withdraw form is submitted
+            document.getElementById('buyForm').onsubmit = function() {
+                showLoading();
+            };
+
+            // Show message notification with optional QR code and share/copy buttons
+            function showMessageNotification(message, qrCodeBase64 = null) {
+                const messageNotification = document.getElementById('messageNotification');
+
+                // Only show image if qrCodeBase64 seems to be a valid base64 image (starts with known image prefix)
+                if (qrCodeBase64 && qrCodeBase64 !== "None" && qrCodeBase64.startsWith("iVBOR")) {
+                    message += `<br><img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code" style="max-width: 420px; max-height: 420px; margin: 20px;">`;
+                }
+
+                // Add message and action buttons
+                messageNotification.innerHTML = `
+
+                    <div>${message}</div>
+
+                    <button id="closeNotificationButton" class="notification-button close-btn">
+                        <i class="fas fa-times" style="margin-right: 2px;"></i>
+                    </button>
+                    
+                `;
+                
+                messageNotification.style.display = 'block'; 
+
+                // Close notification
+                const closeNotificationButton = document.getElementById('closeNotificationButton');
+                closeNotificationButton.onclick = function() {
+                    messageNotification.style.display = 'none';
+                };
+
+                // Copy QR code link to clipboard
+                const copyLinkButton = document.getElementById('copyLinkButton');
+                copyLinkButton.onclick = function (event) {
+                    const qrLink = "{{ responsecopyandpaste | safe }}";
+                    navigator.clipboard.writeText(qrLink)
+                    event.stopPropagation();
+                };
+
+                // Share message and QR code
+                const shareButton = document.getElementById('shareButton');
+                shareButton.onclick = async function () {
+
+                    const qrLink = "{{ responsecopyandpaste | safe }}";
+                    try {
+                        await navigator.clipboard.writeText(qrLink);
+                        console.log('Link copied to clipboard!');
+                    } catch (err) {
+                        console.error('Error copying the link:', err);
+                    }
+
+                    const shareContent = {
+                        text: message, 
+                    };
+
+                    if (qrCodeBase64) {
+                        const blob = await fetch(`data:image/png;base64,${qrCodeBase64}`).then(res => res.blob());
+                        const file = new File([blob], 'qrcode_buy_pix.png', { type: blob.type });
+                        shareContent.files = [file];
+                    }
+
+                    if (navigator.share) {
+                        try {
+                            await navigator.share(shareContent);
+                        } catch (error) {
+                            console.error('Error while sharing:', error);
+                        }
+                    } else {
+                        alert('Sharing not supported on this device.');
+                    }
+                };
+
+            }
+
+            // Display message and QR code notification from the template if available
+            {% if message %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    const qrCodeBase64 = "{{ qr_code_base64 | safe }}";  // QR code em base64 passado do servidor
+                    const qrLink = "{{ message | safe }}"; 
+
+                    showMessageNotification(`{{ message | safe }}`, qrCodeBase64);
+                });
+            {% endif %}
+
+            // Toggle credit card fields based on selected payment method
+            function togglePaymentFields() {
+                const buyType = document.getElementById("buy_type").value;
+                const creditCardFields = document.getElementById('creditCardFields');
+
+                // Apenas limpa campos específicos, não desmonta elementos Stripe
+                document.getElementById('card_name').value = '';
+                document.getElementById('buy_email').value = '';
+
+                const infoBuyCreditCard = document.getElementById("creditcardFields_info");
+                const nameBuyCreditCard = document.getElementById("creditcardFields_name");
+                const emailBuyCreditCard = document.getElementById("creditcardFields_email");
+
+                if (buyType === "credit_card") {
+                    creditCardFields.style.display = "block";
+
+                    // Mostra e marca como required os campos
+                    nameBuyCreditCard.style.display = "block";
+                    emailBuyCreditCard.style.display = "block";
+
+                    document.getElementById("card_name").setAttribute('required', 'required');
+                    document.getElementById("buy_email").setAttribute('required', 'required');
+
+                } else if (buyType === "pix") {
+                    creditCardFields.style.display = "none";
+
+                    // Desmarca os campos obrigatórios
+                    document.getElementById("card_name").removeAttribute('required');
+                    document.getElementById("buy_email").removeAttribute('required');
+                }
+            }
+
+            // Run toggle on page load to initialize correct fields
+            document.addEventListener('DOMContentLoaded', function() {
+                togglePaymentFields();
+            });
+
+            // Update asset icon and balance displayed on screen
+            function changeAsset(name, icon, balance) {
+                document.getElementById('asset-icon').src = icon;
+                let assetBalanceElement = document.getElementById("asset-balance");
+                let formattedBalance = (parseFloat(balance)).toFixed(2);
+                assetBalanceElement.innerHTML = `<strong>${formattedBalance}</strong>`;
+            }
+
+            // Buscar a chave pública do Stripe da rota definida no back-end
+            fetch('/get_stripe_public_key')
+                .then(response => response.json())
+                .then(data => {
+                    const stripePublicKey = data.stripe_public_key;
+                    console.log("Chave pública do Stripe recebida:", stripePublicKey);
+
+                    if (stripePublicKey) {
+                        var stripe = Stripe(stripePublicKey);  // Inicializa o Stripe com a chave pública recebida
+                        var elements = stripe.elements();
+                        var card = elements.create('card');
+                        card.mount('#card-element');  // Monta o campo de cartão
+
+                        // Quando o formulário for enviado
+                        var form = document.getElementById('buyForm');
+                        form.addEventListener('submit', function(event) {
+                            const buyType = document.getElementById('buy_type').value;
+
+                            if (buyType === 'credit_card') {
+                                event.preventDefault();
+
+                                stripe.createPaymentMethod({
+                                    type: 'card',
+                                    card: card,
+                                    billing_details: {
+                                        name: document.getElementById('card_name').value,
+                                        email: document.getElementById('buy_email').value
+                                    }
+                                }).then(function(result) {
+                                    if (result.error) {
+                                        // Exibe erro para o usuário
+                                        const errorMessage = encodeURIComponent(result.error.message);
+                                        window.location.href = `/buy?message=${errorMessage}`;
+                                    } else {
+                                        // Insere o id do método de pagamento no formulário
+                                        document.getElementById('payment-method-id').value = result.paymentMethod.id;
+                                        form.submit();
+                                    }
+                                });
+                            }
+                        });
+
+                    } else {
+                        console.error("Error: Stripe public key was not received.");
+                    }
+
+                    if (buyType === 'pix') {
+                        
+                    }
+                })
+                .catch(error => {
+                    console.error("Error while fetching the Stripe public key:", error);
+            });
+
+        </script>
+    </body>
+</html>

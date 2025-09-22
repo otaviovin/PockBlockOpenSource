@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Help Center</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="help.css">
+        <script src="https://unpkg.com/lucide@latest"></script>
+
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                background-color: var(--cor-preto);
+                color: white;
+                line-height: 1.6;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 1.5rem;
+            }
+
+            /* Hero Pattern */
+            .hero-pattern {
+                background-color: var(--cor-preto);
+                background-image: radial-gradient(var(--cor-header) 0.5px, transparent 0.5px);
+                background-size: 15px 15px;
+            }
+
+            /* Navigation */
+            nav {
+                padding: 1rem 0;
+            }
+
+            .nav-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .logo-text {
+                font-size: 1.25rem;
+                font-weight: bold;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            @media (min-width: 768px) {
+                .nav-links {
+                    display: flex;
+                    gap: 2rem;
+                }
+            }
+
+            .nav-links a {
+                color: white;
+                text-decoration: none;
+                transition: color 0.3s;
+            }
+
+            .nav-links a:hover {
+                color: var(--cor-amarelo);
+            }
+
+            /* Buttons */
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border-radius: 9999px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                border: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .btn-primary {
+                background-color: var(--cor-amarelo);
+                color: black;
+            }
+
+            .btn-primary:hover {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .btn-outline {
+                background-color: transparent;
+                border: 2px solid var(--cor-amarelo);
+                color: var(--cor-amarelo);
+            }
+
+            .btn-outline:hover {
+                background-color: var(--cor-amarelo);
+                color: black;
+            }
+
+            .btn.large {
+                padding: 1rem 3rem;
+                font-size: 1.125rem;
+            }
+
+            /* Hero Section */
+            .hero-section {
+                padding: 5rem 0;
+            }
+
+            .hero-content {
+                display: flex;
+                flex-direction: column;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .hero-content {
+                    flex-direction: row;
+                    align-items: center;
+                }
+
+                .hero-text {
+                    width: 50%;
+                }
+
+                .hero-image {
+                    width: 50%;
+                }
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+                font-weight: bold;
+                margin-bottom: 1.5rem;
+            }
+
+            @media (min-width: 768px) {
+                .hero-text h1 {
+                    font-size: 3.75rem;
+                }
+            }
+
+            .hero-text p {
+                font-size: 1.125rem;
+                color: var(--cor-cinza-claro);
+                margin-bottom: 2rem;
+            }
+
+            .button-group {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .hero-image img {
+                width: 100%;
+                border-radius: 0.5rem;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+
+            /* Gradient Text */
+            .gradient-text {
+                background: linear-gradient(45deg, var(--cor-amarelo), var(--cor-amarelo-escuro));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            /* Icons */
+            .icon-yellow {
+                color: var(--cor-amarelo);
+            }
+
+            .icon-yellow.large {
+                width: 4rem;
+                height: 4rem;
+            }
+
+            /* Features Section */
+            .features-section {
+                padding: 5rem 0;
+                background-color: black;
+            }
+
+            .features-section h2 {
+                font-size: 1.875rem;
+                text-align: center;
+                margin-bottom: 4rem;
+            }
+
+            .features-grid {
+                display: grid;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .features-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            .feature-card {
+                background-color: #111;
+                padding: 2rem;
+                border-radius: 0.5rem;
+                transition: transform 0.3s;
+            }
+
+            .feature-card:hover {
+                transform: scale(1.05);
+            }
+
+            .feature-card i {
+                margin-bottom: 1.5rem;
+                width: 2rem;
+                height: 2rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.25rem;
+                margin-bottom: 1rem;
+            }
+
+            .feature-card p {
+                color: var(--cor-cinza-claro);
+            }
+
+            /* How It Works Section */
+            .how-it-works-section {
+                padding: 5rem 0;
+                background-color: #111;
+            }
+
+            .how-it-works-section h2 {
+                font-size: 1.875rem;
+                text-align: center;
+                margin-bottom: 4rem;
+            }
+
+            .how-it-works-grid {
+                display: grid;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .how-it-works-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            .steps {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .step {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .step-number {
+                color: var(--cor-amarelo);
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+
+            .step-content h3 {
+                font-size: 1.25rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .step-content p {
+                color: var(--cor-cinza-claro);
+            }
+
+            .trading-card {
+                background-color: var(--cor-header);
+                padding: 2rem;
+                border-radius: 0.5rem;
+            }
+
+            .trading-card i {
+                width: 4rem;
+                height: 4rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .trading-card h3 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .trading-card p {
+                color: var(--cor-cinza-claro);
+            }
+
+            /* CTA Section */
+            .cta-section {
+                padding: 5rem 0;
+                text-align: center;
+            }
+
+            .cta-section i {
+                margin-bottom: 2rem;
+            }
+
+            .cta-section h2 {
+                font-size: 2.25rem;
+                margin-bottom: 2rem;
+            }
+
+            @media (min-width: 768px) {
+                .cta-section h2 {
+                    font-size: 2.5rem;
+                }
+            }
+
+            /* Footer */
+            footer {
+                background-color: black;
+                padding: 3rem 0;
+            }
+
+            .footer-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+            }
+
+            @media (min-width: 768px) {
+                .footer-content {
+                    flex-direction: row;
+                    justify-content: space-between;
+                }
+            }
+
+            .footer-links {
+                display: flex;
+                gap: 2rem;
+            }
+
+            .footer-links a {
+                color: var(--cor-cinza);
+                text-decoration: none;
+                transition: color 0.3s;
+            }
+
+            .footer-links a:hover {
+                color: var(--cor-amarelo);
+            }
+
+            /* Help Hero Section */
+            .help-hero {
+                padding: 4rem 0;
+                text-align: center;
+            }
+            
+            .help-hero h1 {
+                font-size: 3rem;
+                margin-bottom: 2rem;
+            }
+            
+            .search-box {
+                max-width: 600px;
+                margin: 0 auto 3rem;
+                position: relative;
+            }
+            
+            .search-box input {
+                width: 100%;
+                padding: 1rem 3rem;
+                border-radius: 9999px;
+                border: 2px solid var(--cor-amarelo);
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+                font-size: 1.1rem;
+            }
+            
+            .search-box input::placeholder {
+                color: var(--cor-cinza);
+            }
+            
+            .search-icon {
+                position: absolute;
+                left: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--cor-amarelo);
+            }
+            
+            .quick-links {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1.5rem;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            .quick-link {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 1rem;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 0.5rem;
+                color: white;
+                text-decoration: none;
+                transition: all 0.3s;
+            }
+            
+            .quick-link:hover {
+                background: var(--cor-amarelo);
+                color: black;
+            }
+            
+            .quick-link:hover i {
+                color: black;
+            }
+            
+            /* Tutorials Section */
+            .tutorials-section {
+                padding: 5rem 0;
+                background-color: black;
+            }
+            
+            .tutorials-section h2 {
+                text-align: center;
+                margin-bottom: 3rem;
+            }
+            
+            .tutorials-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
+            }
+            
+            .tutorial-card {
+                background: #111;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                transition: transform 0.3s;
+            }
+            
+            .tutorial-card:hover {
+                transform: translateY(-5px);
+            }
+            
+            .video-thumbnail {
+                position: relative;
+                aspect-ratio: 16/9;
+                overflow: hidden;
+            }
+            
+            .video-thumbnail img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            .play-icon {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: var(--cor-amarelo);
+                width: 3rem;
+                height: 3rem;
+                opacity: 0.8;
+                transition: opacity 0.3s;
+            }
+            
+            .tutorial-card:hover .play-icon {
+                opacity: 1;
+            }
+            
+            .tutorial-card h3 {
+                padding: 1.5rem 1.5rem 0.5rem;
+                font-size: 1.25rem;
+            }
+            
+            .tutorial-card p {
+                padding: 0 1.5rem 1.5rem;
+                color: var(--cor-cinza-claro);
+            }
+            
+            /* FAQ Section */
+            .faq-section {
+                padding: 5rem 0;
+                background-color: #111;
+            }
+            
+            .faq-section h2 {
+                text-align: center;
+                margin-bottom: 3rem;
+            }
+            
+            .faq-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
+            }
+            
+            .faq-category h3 {
+                color: var(--cor-amarelo);
+                margin-bottom: 1.5rem;
+                font-size: 1.5rem;
+            }
+            
+            .faq-items {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .faq-item {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0.5rem;
+                overflow: hidden;
+            }
+            
+            .faq-question {
+                padding: 1rem 1.5rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                font-weight: 500;
+            }
+            
+            .faq-question i {
+                transition: transform 0.3s;
+            }
+            
+            .faq-item.active .faq-question i {
+                transform: rotate(180deg);
+            }
+            
+            .faq-answer {
+                padding: 0 1.5rem;
+                height: 0;
+                overflow: hidden;
+                color: var(--cor-cinza-claro);
+                transition: all 0.3s;
+            }
+            
+            .faq-item.active .faq-answer {
+                height: auto;
+                padding: 0 1.5rem 1rem;
+            }
+            
+            /* Support Section */
+            .support-section {
+                padding: 5rem 0;
+                background-color: var(--cor-preto);
+            }
+            
+            .support-section h2 {
+                text-align: center;
+                margin-bottom: 3rem;
+            }
+            
+            .support-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 2rem;
+            }
+            
+            .support-card {
+                background: #111;
+                padding: 2rem;
+                border-radius: 0.5rem;
+                text-align: center;
+                transition: transform 0.3s;
+            }
+            
+            .support-card:hover {
+                transform: translateY(-5px);
+            }
+            
+            .support-card i {
+                width: 3rem;
+                height: 3rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .support-card h3 {
+                margin-bottom: 1rem;
+                font-size: 1.25rem;
+            }
+            
+            .support-card p {
+                color: var(--cor-cinza-claro);
+                margin-bottom: 1.5rem;
+            }
+            
+            /* Responsive Adjustments */
+            @media (max-width: 768px) {
+                .help-hero h1 {
+                    font-size: 2rem;
+                }
+            
+                .quick-links {
+                    grid-template-columns: 1fr;
+                }
+            
+                .tutorials-grid,
+                .faq-grid,
+                .support-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .min-h-screen {
+                margin-top: 10px;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+        <div class="min-h-screen">
+            <!-- Navigation -->
+            <nav class="container">
+                <div class="nav-content">
+                    <div class="logo">
+                        <i data-lucide="coins" class="icon-yellow"></i>
+                        <span class="logo-text">PocketBlock</span>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home">Home</a>
+                        <a href="#tutorials">Tutorials</a>
+                        <a href="faq">FAQ</a>
+                        <a href="ticket">Support</a>
+                    </div>
+                    <button class="btn btn-primary" href="ticket">Open Ticket</button>
+                </div>
+            </nav>
+
+            <!-- Help Hero Section -->
+            <div class="hero-pattern">
+                <div class="container help-hero">
+                    <h1>How can we <span class="gradient-text">help you?</span></h1>
+                    <div class="search-box">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" placeholder="Search for help articles, tutorials, or FAQs...">
+                    </div>
+                    <div class="quick-links">
+                        <a href="#getting-started" class="quick-link">
+                            <i data-lucide="play-circle" class="icon-yellow"></i>
+                            Getting Started
+                        </a>
+                        <a href="#account" class="quick-link">
+                            <i data-lucide="user" class="icon-yellow"></i>
+                            Account Help
+                        </a>
+                        <a href="#trading" class="quick-link">
+                            <i data-lucide="trending-up" class="icon-yellow"></i>
+                            Trading Guide
+                        </a>
+                        <a href="#security" class="quick-link">
+                            <i data-lucide="shield" class="icon-yellow"></i>
+                            Security
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Tutorials -->
+            <section id="tutorials" class="tutorials-section">
+                <div class="container">
+                    <h2><span class="gradient-text">Video Tutorials</span></h2>
+                    <div class="tutorials-grid">
+                        <div class="tutorial-card">
+                            <div class="video-thumbnail">
+                                <i data-lucide="play-circle" class="play-icon"></i>
+                                <img src="https://images.unsplash.com/photo-1634704784915-aacf363b021f?auto=format&fit=crop&w=600" alt="Getting Started Tutorial">
+                            </div>
+                            <h3>Getting Started with PocketBlock</h3>
+                            <p>Learn the basics of our platform and make your first transaction.</p>
+                        </div>
+                        <div class="tutorial-card">
+                            <div class="video-thumbnail">
+                                <i data-lucide="play-circle" class="play-icon"></i>
+                                <img src="https://images.unsplash.com/photo-1620321023374-d1a68fbc720d?auto=format&fit=crop&w=600" alt="PIX Tutorial">
+                            </div>
+                            <h3>Using PIX for Deposits</h3>
+                            <p>Step-by-step guide to deposit funds using PIX.</p>
+                        </div>
+                        <div class="tutorial-card">
+                            <div class="video-thumbnail">
+                                <i data-lucide="play-circle" class="play-icon"></i>
+                                <img src="https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&w=600" alt="Trading Tutorial">
+                            </div>
+                            <h3>Trading USDC and EURC</h3>
+                            <p>Master stablecoin trading on our platform.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section id="faq" class="faq-section">
+                <div class="container">
+                    <h2><span class="gradient-text">Frequently Asked Questions</span></h2>
+                    <div class="faq-grid">
+                        <div class="faq-category">
+                            <h3>Account & Security</h3>
+                            <div class="faq-items">
+                                <div class="faq-item">
+                                    <div class="faq-question">
+                                        <span>How do I verify my account?</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="faq-answer">
+                                        Follow our simple KYC process: upload a valid ID, proof of address, and complete the verification form.
+                                    </div>
+                                </div>
+                                <div class="faq-item">
+                                    <div class="faq-question">
+                                        <span>How to enable 2FA?</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="faq-answer">
+                                        Go to Security Settings, select "Enable 2FA", and follow the steps to set up using Google Authenticator.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="faq-category">
+                            <h3>Deposits & Withdrawals</h3>
+                            <div class="faq-items">
+                                <div class="faq-item">
+                                    <div class="faq-question">
+                                        <span>How long do PIX transfers take?</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="faq-answer">
+                                        PIX transfers are instant! Once you initiate the transfer, funds should appear in your account within seconds.
+                                    </div>
+                                </div>
+                                <div class="faq-item">
+                                    <div class="faq-question">
+                                        <span>What are the withdrawal limits?</span>
+                                        <i data-lucide="chevron-down"></i>
+                                    </div>
+                                    <div class="faq-answer">
+                                        Withdrawal limits vary by verification level. Basic accounts can withdraw up to 1,000 USDC daily.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Support Options -->
+            <section id="support" class="support-section">
+                <div class="container">
+                    <h2><span class="gradient-text">Need More Help?</span></h2>
+                    <div class="support-grid">
+                        <div class="support-card">
+                            <i data-lucide="messages-square" class="icon-yellow"></i>
+                            <h3>Live Chat</h3>
+                            <p>Chat with our support team 24/7 for immediate assistance.</p>
+                            <button class="btn btn-primary">Start Chat</button>
+                        </div>
+                        <div class="support-card">
+                            <i data-lucide="ticket" class="icon-yellow"></i>
+                            <h3>Support Ticket</h3>
+                            <p>Create a ticket for complex issues requiring detailed attention.</p>
+                            <button class="btn btn-primary">Open Ticket</button>
+                        </div>
+                        <div class="support-card">
+                            <i data-lucide="mail" class="icon-yellow"></i>
+                            <h3>Email Support</h3>
+                            <p>Send us an email for non-urgent inquiries.</p>
+                            <button class="btn btn-primary">Email Us</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer>
+                <div class="container">
+                    <div class="footer-content">
+                        <div class="logo">
+                            <i data-lucide="coins" class="icon-yellow"></i>
+                            <span class="logo-text">PocketBlock</span>
+                        </div>
+                        <div class="footer-links">
+                            <a href="#">Terms</a>
+                            <a href="#">Privacy</a>
+                            <a href="#">Support</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <script>
+            lucide.createIcons();
+            
+            // FAQ Toggle
+            document.querySelectorAll('.faq-question').forEach(question => {
+                question.addEventListener('click', () => {
+                    const item = question.parentElement;
+                    item.classList.toggle('active');
+                });
+            });
+        </script>
+    </body>
+</html>

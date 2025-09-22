@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Transaction</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock - Transaction">
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            /* Estilos gerais */
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .general {
+                padding: 20px;
+                margin-top: 20px;
+                background-color: var(--cor-cinza);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%; 
+                max-width: 800px; 
+                box-sizing: border-box; 
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+
+            p {
+                color: var(--cor-preto);
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            /* Estilo para o endereço e chave secreta */
+            .address-secret {
+                background-color: var(--cor-amarelo);
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+                width: 100%;
+            }
+
+            input[type="submit"] {
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; /* Adiciona uma transição suave */
+            }
+
+            form {
+                background-color: var(--cor-cinza);
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 800px;
+                margin-bottom: 10px;
+            }
+
+            label {
+                color: var(--cor-preto);
+                margin-bottom: 10px;
+            }
+
+            .text-label {
+                font-size: 12px;
+                color: var(--cor-balance-label);
+                margin-left: 8px;
+            }
+
+            input[type="text"], input[type="number"], select {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; /* Adiciona uma transição suave */
+                box-sizing: border-box;
+            }
+
+            input[type="submit"] {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin-bottom: 10px;
+                margin-top: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; /* Adiciona uma transição suave */
+            }
+
+            input[type="submit"]:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                width: 200px;
+                height: 40px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; /* Adiciona uma transição suave */
+            }
+
+            /* Estilo para o botão do menu */
+            #openmenu {
+                position: fixed; /* Fixa o botão na tela */
+                top: 80px; /* Distância do topo */
+                left: 20px; /* Distância da esquerda */
+                padding: 10px 15px; /* Padding do botão */
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                border: none; /* Remove borda */
+                border-radius: 5px; /* Bordas arredondadas */
+                cursor: pointer; /* Cursor de ponteiro */
+                transition: background-color 0.3s; /* Transição suave para hover */
+                z-index: 1000; /* Garante que o botão fique acima de outros elementos */
+                display: flex; /* Alinha o ícone */
+                align-items: center; /* Centraliza verticalmente */
+                justify-content: center; /* Centraliza horizontalmente */
+            }
+
+            #openmenu:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar {
+                width: 75px; /* Largura quando colapsada */
+                height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0; /* Agora começa visível, mas colapsada */
+                background-color: #333;
+                color: var(--cor-balance-label);
+                overflow-x: hidden;
+                transition: 0.3s;
+                padding-top: 20px;
+                z-index: 1000;
+            }
+
+            /* Quando sidebar está expandida */
+            .sidebar.active {
+                width: 300px;
+            }
+
+            /* Estilo base para botões */
+            .sidebar button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                background-color: transparent;
+                border: none;
+                color: var(--cor-balance-label);
+                width: 275px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            .sidebar .close-button {
+                background-color: var(--cor-amarelo-escuro);
+                color: black; 
+            }
+
+            .sidebar .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar:not(.active) button {
+                width: 55px;
+            }
+
+            /* Oculta o texto quando a sidebar está colapsada */
+            .sidebar:not(.active) .menu-text {
+                display: none;
+            }
+
+            /* Espaço entre ícone e texto */
+            .sidebar button i {
+                margin-right: 8px;
+            }
+
+            /* Corrige botões de formulário */
+            .sidebar form {
+                margin: 0;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            select {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; /* Adiciona uma transição suave */
+                text-align: center; /* Tenta centralizar o texto */
+            }
+
+            .info-item {
+                display: flex;
+                align-items: center;
+            }
+
+            .close-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .openmenu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .openmenu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .forgetall-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .forgetall-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .logout-button, .back-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .logout-button:hover, .back-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .message {
+                position: fixed; /* Fixa a notificação na tela */
+                top: 10px; /* Distância do topo */
+                left: 50%; /* Centraliza horizontalmente */
+                transform: translateX(-50%); /* Ajusta a centralização */
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                width: 700px;
+                text-align: center;
+                margin: 0 auto; /* Centraliza a notificação */
+                background-color: var(--cor-amarelo);
+                padding: 10px;
+                border-radius: 5px;
+                color: var(--cor-preto);
+                overflow-y: auto; /* Adiciona barra de rolagem */
+                max-height: 500px; /* Altura máxima da notificação */
+                display: none; /* Inicialmente oculto */
+                z-index: 999; /* Fica acima de outros elementos */
+            }
+
+            /* Estilo para a notificação de mensagem */
+            .notification-message {
+                position: fixed;
+                top: 10%;
+                left: 50%;
+                transform: translate(-50%, -10%);
+                background-color: rgba(255, 255, 0, 0.9);
+                color: black;
+                padding: 10px 20px;
+                border-radius: 5px;
+                display: none;
+                font-size: 16px;
+                z-index: 1001;
+                width: 700px;
+                text-align: center;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+
+            /* Overlay de fundo escurecido */
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5); /* Escurece o fundo */
+                z-index: 999;
+                display: none;
+            }
+
+            .form-container {
+                display: flex; /* Usar flexbox para o layout */
+                justify-content: space-between; /* Espaçamento entre as colunas */
+                align-items: center; /* Centraliza verticalmente as colunas */
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column; /* Coloca o label e select em coluna */
+                margin-right: 20px; /* Espaço entre os grupos de formulário */
+                margin-left: 20px; /* Espaço entre os grupos de formulário */
+            }
+
+            .form-group label {
+                margin-bottom: 5px; /* Espaço entre o label e o select */
+            }
+
+            .form-group-destination-account {
+                width: 450px;
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingSpinner {
+                border: 8px solid var(--cor-cinza);
+                border-top: 8px solid var(--cor-amarelo);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px; /* Reduzindo o espaçamento */
+                position: relative;
+                width: 420px; /* Defina uma largura fixa */
+                height: 60px;  /* Defina uma altura fixa */
+                overflow: visible;
+                box-sizing: border-box; /* Mantém as dimensões fixas mesmo com padding/border */
+            }
+
+            .container img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover; 
+            }
+
+            .container span {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 300px;
+                height: 60px;
+                text-align: center; 
+            }
+
+            .container .dropdown {
+                width: 100px;
+                height: 60px;
+                position: relative;
+            }
+
+            .container button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 30px;
+                width: 100px;
+                text-align: center; /* Garante que o texto dentro do botão esteja centralizado */
+            }
+
+            .icon {
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown-content {
+                background-color: var(--cor-cinza-claro);
+                border-radius: 5px;
+                padding: 10px;
+                list-style-type: none;
+                margin: 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                position: absolute;
+                z-index: 1;
+                width: 150px; /* Ajuste o tamanho conforme necessário */
+                top: 45px;
+            }
+
+            .dropdown-content li {
+                padding: 10px;
+                color: var(--cor-preto);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            /* Hover effect */
+            .dropdown-content li:hover {
+                background-color: var(--cor-amarelo-escuro);
+                color: #fff;
+            }
+
+            /* Hover effect for the dropdown button */
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .xlm-balance-dropdown, .usdc-balance-dropdown, .eurc-balance-dropdown, .brl-balance-dropdown {
+                font-weight: bold; /* Garante que o saldo esteja em negrito */
+                margin-left: 10px; /* Dá um pequeno espaço entre o texto e o valor */
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                transition: background-color 0.3s ease;
+            }
+
+            .dropdown button:hover {
+                background-color: var(--cor-amarelo); /* Fundo amarelo no hover */
+                color: var(--cor-preto); /* Cor preta no texto no hover */
+            }
+
+            /* Estilo do dropdown */
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+            }
+
+            /* Exibe o dropdown quando o botão for clicado */
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .balance-value {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            /* Estilo do botão com a classe 'three-dots-button' */
+            .three-dots-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 5px 10px;
+                font-size: 16px;
+                border-radius: 50%; /* Formato arredondado */
+                width: 40px; /* Ajuste conforme necessário */
+                height: 40px; /* Ajuste conforme necessário */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .header {
+                width: 100%;
+                background-color: var(--cor-header);
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: var(--cor-preto);
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header .app-name {
+                font-size: 24px;
+                margin-left: 70px;
+            }
+
+            .help-icon {
+                background-color: var(--button-bg-color); /* Use a cor padrão dos botões */
+                color: var(--button-text-color);
+                border: none;
+                width: 15px; /* Define um tamanho fixo */
+                height: 15px;
+                border-radius: 50%; /* Torna o botão redondo */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .help-icon a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .help-icon:hover {
+                background-color: var(--button-hover-bg-color);
+            }
+
+            .notification-button {
+                margin-top: 10px;
+                padding: 8px 15px;
+                background-color: var(--cor-header);
+                color: black;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center; 
+                gap: 8px; 
+                width: auto; 
+            }
+
+            .notification-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo-escuro);
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <!-- Header section with app name and help button -->
+        <header class="header">
+            <div class="app-name">PocketBlock</div>
+            <!-- Help icon button linking to the Help page -->
+            <button class="help-icon">
+                <a href="{{ url_for('help') }}"><i class="fas fa-question-circle"></i></a>
+            </button>
+        </header>
+
+        <!-- Fullscreen dark overlay shown during processing/loading -->
+        <div id="loadingOverlay">
+            <div id="loadingSpinner"></div>
+        </div>
+
+        <!-- Semi-transparent background overlay used for disabling interactions -->
+        <div id="overlay" class="overlay"></div>
+
+        <!-- Message notification box (appears when an alert or info is triggered) -->
+        <div id="messageNotification" class="notification-message"></div>
+
+        <!-- Sidebar navigation menu -->
+        <div id="sidebar" class="sidebar">
+            <!-- Button to toggle the sidebar visibility -->
+            <button id="close" type="button" class="close-button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+                <span class="menu-text">Menu</span>
+            </button>
+            <!-- Button to navigate back to the main dashboard -->
+            <button class="back-button" onclick="showLoading(); location.href='{{ url_for('main') }}'" type="button">
+                <i class="fas fa-arrow-left"></i>
+                <span class="menu-text">Back</span>
+            </button>
+            <!-- Logout button: ends user session and redirects -->
+            <button id="logoutBtn" class="logout-button" onclick="handleLogout()" type="button">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="menu-text">Logout</span>
+            </button>
+        </div>
+
+        <form id="general" class="general" method="POST" action="{{ url_for('transaction') }}" onsubmit="showLoading()">
+            <h1>Transaction</h1>
+
+            <div class="info-block">
+                <p class="address-secret"><strong>Address:</strong> {{ keypair }} </p>
+                <p class="address-secret"><strong>Secret Key:</strong> {{ seed[:3] }}{{ '*' * 50 }}{{ seed[-3:] }} </p>
+            </div>
+
+            <div class="container">
+                <img id="asset-icon" class="icon" src="{{ url_for('static', filename='usdccoin.svg') }}" alt="Ativo">
+                <span class="balance-value" id="asset-balance"><strong>{{ usdc_balance }}</strong></span>
+                <div class="dropdown">
+                    <button class="three-dots-button">...</button>
+                    <ul class="dropdown-content">
+                        <li onclick="changeAsset('USDC', '{{ url_for('static', filename='usdccoin.svg') }}', {{ usdc_balance }})">
+                            USDC
+                        </li>
+                        <li onclick="changeAsset('EURC', '{{ url_for('static', filename='eurccoin.svg') }}', {{ eurc_balance }})">
+                            EURC
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </form>
+
+        <form id="transactionForm" class="general" method="POST">
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="sender_asset_code">From asset</label>
+                    </div>
+                    <select id="sender_asset_code" name="sender_asset_code" required>
+                        <!--
+                        <option value="XLM">XLM</option>
+                        -->
+                        <option value="USDC">USDC</option>
+                        <option value="EURC">EURC</option>
+                        <!--
+                        <option value="BRLC">BRLC</option>
+                        -->
+                    </select>
+                </div>
+            
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="asset_code">To asset</label>
+                    </div>
+                    <select id="asset_code" name="asset_code" required>
+                        <!--
+                        <option value="XLM">XLM</option>
+                        -->
+                        <option value="USDC">USDC</option>
+                        <option value="EURC">EURC</option>
+                        <!--
+                        <option value="BRLC">BRLC</option>
+                        -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-destination-account">
+                <div class="text-label">
+                    <label for="destination_account">To account</label>
+                </div>
+                <input type="text" id="destination_account" name="destination_account" placeholder="GDVZPLRM..." required maxlength="56" minlength="56" pattern="G[a-zA-Z0-9]{55}">
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="amount_sell">Amount</label>
+                    </div>
+                    <input type="number" id="amount_sell" name="amount_sell" step="0.01" min="0" placeholder="100.00" required>
+                </div>
+            </div>
+
+            <button type="button" id="updateTaxesBtn">Update Taxes</button>
+
+            <div id="taxesResult" style="display:none;">
+            <p><strong>Percent Fee:</strong> <span id="feePercent"></span>%</p>
+            <p><strong>Amount Fee:</strong> <span id="amountFee"></span></p>
+            <p><strong>Amount:</strong> <span id="amountSend"></span></p>
+            <p><strong>Final Amount:</strong> <span id="finalAmount"></span></p>
+            </div>
+
+            <input id="transaction-button" type="submit" value="Transact" style="display: none;">
+
+        </form>
+
+        <script>
+
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+
+            // Clears form fields on page load
+            window.onload = function() {
+                document.getElementById("general").reset();
+                document.getElementById("transactionForm").reset();
+            };
+
+            function toggleSidebar() {
+                document.getElementById("sidebar").classList.toggle("active");
+                document.querySelector(".content").classList.toggle("active");
+            }
+
+            // Fechar a sidebar quando clicar fora dela
+            window.addEventListener('click', function(event) {
+                var sidebar = document.getElementById('sidebar');
+                var openMenuButton = document.getElementById('openmenu');
+                    
+                // Verificar se o clique foi fora da sidebar e do botão do menu
+                if (!sidebar.contains(event.target) && !openMenuButton.contains(event.target)) {
+                    sidebar.classList.remove("active");
+                    document.querySelector(".content").classList.remove("active");
+                }
+            });
+
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            document.getElementById('logoutBtn').onclick = function() {
+                showLoading();
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            };
+
+            document.getElementById('transactionForm').onsubmit = function() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            };
+
+            function handleLogout() {
+                showLoading(); // Exibe a tela de carregamento
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            }
+
+            // Função para exibir a notificação de mensagem
+            function showMessageNotification(message) {
+                const messageNotification = document.getElementById('messageNotification');
+
+                messageNotification.innerHTML = `
+
+                    <div>${message}</div>
+
+                    <button id="closeNotificationButton" class="notification-button close-btn">
+                        <i class="fas fa-times" style="margin-right: 2px;"></i>
+                    </button>
+                    
+                `;
+                
+                messageNotification.style.display = 'block';  // Exibe a notificação
+
+                // Função para fechar a notificação
+                const closeNotificationButton = document.getElementById('closeNotificationButton');
+                closeNotificationButton.onclick = function() {
+                    messageNotification.style.display = 'none'; // Fecha a notificação
+                };
+
+            }
+
+            // Exibir a mensagem de notificação se existir no template
+            {% if message %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    showMessageNotification(`{{ message | safe }}`);
+                });
+            {% endif %}
+
+            document.addEventListener("DOMContentLoaded", function() {
+                // Obtendo o valor do ativo (se existir) para o campo asset_code
+                const assetCodeValue = "{{ asset_code | safe }}";
+
+                // Se o valor do ativo for válido, preenche o select
+                if (assetCodeValue) {
+                    const selectElement = document.getElementById("asset_code");
+                    // Percorre todas as opções e seleciona o valor correspondente
+                    for (let option of selectElement.options) {
+                        if (option.value === assetCodeValue) {
+                            option.selected = true;
+                            break; // Sai do loop assim que encontrar a opção correspondente
+                        }
+                    }
+                }
+
+                // Obtendo os valores dos campos do servidor (se existirem)
+                const destinationaccountValue = "{{ destination_account | safe }}";
+                const amountsellValue = "{{ amount_sell | safe }}";
+
+                // Definindo os valores dos campos no formulário, se existirem
+                if (destinationaccountValue) {
+                    document.getElementById("destination_account").value = destinationaccountValue;
+                }
+                if (amountsellValue) {
+                    document.getElementById("amount_sell").value = amountsellValue;
+                }
+            });
+
+            function changeAsset(name, icon, balance) {
+                document.getElementById('asset-icon').src = icon;
+                let assetBalanceElement = document.getElementById("asset-balance");
+                let formattedBalance = (parseFloat(balance)).toFixed(2);
+                assetBalanceElement.innerHTML = `<strong>${formattedBalance}</strong>`;
+            }
+
+            document.getElementById("updateTaxesBtn").addEventListener("click", async () => {
+                const senderAsset = document.getElementById("sender_asset_code").value;
+                const receiverAsset = document.getElementById("asset_code").value;
+                const amountSell = document.getElementById("amount_sell").value;
+
+                if (!senderAsset || !receiverAsset || !amountSell) {
+                    alert("Please fill in all fields before updating the fees.");
+                    return;
+                }
+
+                try {
+                    const response = await fetch("/update-taxes-transaction", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ sender_asset_code: senderAsset, receiver_asset_code: receiverAsset, amount: amountSell })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Exibir taxas na tela
+                        document.getElementById("feePercent").innerText = result.fee_percent;
+                        document.getElementById("amountFee").innerText = result.amount_fee;
+                        document.getElementById("amountSend").innerText = result.amount;
+                        document.getElementById("finalAmount").innerText = result.final_amount;
+
+                        document.getElementById("taxesResult").style.display = "block";
+
+                        // Bloquear campos para não alterar mais
+                        document.getElementById("sender_asset_code").disabled = true;
+                        document.getElementById("asset_code").disabled = true;
+                        document.getElementById("destination_account").readOnly = true;
+                        document.getElementById("amount_sell").readOnly = true;
+
+                        // Mostrar botão Transact e esconder Update Taxes
+                        document.getElementById("transaction-button").style.display = "inline-block";
+                        document.getElementById("updateTaxesBtn").style.display = "none";
+
+                    } else {
+                        alert("Error calculating fees: " + result.error);
+                    }
+                } catch (err) {
+                    alert("Communication error with the server: " + err);
+                }
+            });
+
+        </script>
+    </body>
+</html>

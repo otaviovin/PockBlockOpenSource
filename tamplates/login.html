@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Login</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock - Login">
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+
+            form {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            textarea,
+            input[type="password"] {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 15px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                margin: 5px;
+                width: 500px;
+                height: 150px;
+                resize: none;
+                overflow-y: auto;
+                box-sizing: border-box;
+                white-space: pre-wrap;
+                text-align: start;
+                position: relative;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+            }
+
+            input[type="password"] {
+                height: auto;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                width: 200px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .info {
+                display: none; 
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 5px;
+                margin-top: 5px;
+                width: 650px;
+                text-align: start;
+                white-space: pre-wrap;
+                position: relative;
+            }
+
+            .info.hexadecimal {
+                font-size: 15px;
+            }
+
+            .copy-button {
+                position: absolute;
+                right: 10px;
+                top: 10px;
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+                border: none;
+                padding: 5px 8px;
+                cursor: pointer;
+                font-size: 12px;
+                border-radius: 5px;
+                width: auto;
+                text-align: center;
+            }
+
+            .notification {
+                display: none;
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                padding: 10px;
+                border-radius: 5px;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                z-index: 9999;
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingMessage {
+                color: var(--cor-amarelo);
+                font-size: 18px;
+            }
+
+            #passwordModal {
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                border-radius: 10px;
+                padding: 20px;
+                z-index: 1001;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            }
+
+            #passwordModal h2 {
+                margin: 0;
+                margin-bottom: 10px;
+                color: var(--cor-preto);
+            }
+
+            #passwordModal input {
+                width: 100%;
+                margin-bottom: 10px;
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .modal-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 5px;
+                cursor: pointer;
+                border-radius: 5px;
+                font-size: 16px;
+                width: 200px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+        </style>
+        
+    </head>
+
+    <body>
+        <h1>Login to PocketBlock</h1>
+
+        <form id="loginForm" method="POST" action="{{ url_for('login') }}">
+            <textarea name="passphrase" placeholder="Enter passphrase or secret key or password" required></textarea>
+
+            <button type="submit" onclick="showLoading('Getting log. Please wait!')"> <i class="fas fa-sign-in-alt"></i></button> <!-- Login -->
+            <button onclick="generateAccount()"> <i class="fas fa-user-plus"></i></button> <!-- Generate Account -->
+            <button type="button" onclick="showLoading('Going home. Please wait!'); location.href='{{ url_for('home') }}'"> <i class="fas fa-home" ></i></button> <!-- Home -->
+
+        </form>
+
+        <div id="publicKey" class="info"></div>
+        <div id="secretKey" class="info"></div>
+        <div id="passphrase" class="info"></div>
+        <div id="hexadecimal" class="info hexadecimal"></div>
+
+        <div id="notification" class="notification">Copied to clipboard!</div>
+
+        <div id="loadingOverlay">
+            <div id="loadingMessage"></div>
+        </div>
+
+        <!-- Modal para entrada de senha -->
+        <div id="passwordModal">
+            <h2>Enter Password</h2>
+            <input type="password" id="passwordInput" placeholder="Enter your password" required>
+            <button class="modal-button" onclick="submitPassword()">Submit</button>
+            <button class="modal-button" onclick="closePasswordModal()">Cancel</button>
+        </div>
+
+    </body>
+
+    <script>
+            
+        function showLoading(message) {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingMessage = document.getElementById('loadingMessage');
+            loadingMessage.innerText = message;
+            overlay.classList.add('show');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('show');
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            function showMessageNotification(message) {
+                const notification = document.getElementById('notification');
+                notification.innerHTML = message;
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 5000); // Fechar após 5 segundos
+            }
+
+            {% if error %}
+            showMessageNotification("{{ error }}");
+            {% endif %}
+        });
+
+        {% if error %}  
+                document.addEventListener('DOMContentLoaded', function() {
+                    showMessageNotification(`{{ error | tojson }}`);
+                });
+        {% endif %}
+
+        function generateAccount() {
+            document.getElementById('passwordModal').style.display = 'block'; // Exibir modal de senha
+        }
+
+        function submitPassword() {
+            const password = document.getElementById('passwordInput').value;
+            if (password) {
+                createAccount(password);
+                document.getElementById('passwordModal').style.display = 'none'; // Ocultar modal após enviar
+            } else {
+                alert('Please enter a password.');
+            }
+        }
+
+        function createAccount(password) {
+            showLoading('Generating account, please wait...');
+            fetch('/generate_account', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading(); // Ocultar a mensagem de loading após a criação da conta
+
+                // Exibir os campos de informação
+                document.getElementById('publicKey').style.display = 'block';
+                document.getElementById('secretKey').style.display = 'block';
+                document.getElementById('passphrase').style.display = 'block';
+                document.getElementById('hexadecimal').style.display = 'block';
+
+                // Atualizar o conteúdo dos campos
+                document.getElementById('publicKey').innerHTML = `Public Key: ${data.public_key} <button class="copy-button" onclick="copyToClipboard('${data.public_key}')">Copy</button>`;
+                document.getElementById('secretKey').innerHTML = `Secret Key: ${data.secret_key} <button class="copy-button" onclick="copyToClipboard('${data.secret_key}')">Copy</button>`;
+                document.getElementById('passphrase').innerHTML = `Passphrase: ${data.passphrase} <button class="copy-button" onclick="copyToClipboard('${data.passphrase}')">Copy</button>`;
+                document.getElementById('hexadecimal').innerHTML = `Hexadecimal: ${data.hexadecimal} <button class="copy-button" onclick="copyToClipboard('${data.hexadecimal}')">Copy</button>`;
+            })
+            .catch(error => {
+                hideLoading();
+                alert("Error generating account: " + error);
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const notification = document.getElementById('notification');
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+    </script>
+
+</html>

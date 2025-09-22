@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Settings</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock - Settings">
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .general {
+                padding: 20px;
+                margin-top: 20px;
+                background-color: var(--cor-cinza);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%; 
+                max-width: 800px; 
+                box-sizing: border-box; 
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+
+            p {
+                color: var(--cor-preto);
+                font-size: 16px;
+            }
+
+            .address-secret {
+                background-color: var(--cor-amarelo);
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+                width: 100%;
+            }
+
+            input[type="submit"] {
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+                display: block; 
+                margin: 20px auto; 
+            }
+
+            form {
+                background-color: var(--cor-cinza);
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 800px;
+                margin-bottom: 10px;
+            }
+
+            form#editForm {
+                display: flex;
+                flex-direction: column;
+                align-items: center; 
+                justify-content: center;
+                margin: 0 auto; 
+                width: 800px;
+            }
+
+            .form-group {
+                width: 80%;
+                display: flex;
+                justify-content: center;
+                align-items: center; 
+                flex-direction: column;
+                margin-right: 20px; 
+                margin-left: 20px; 
+            }
+
+            .form-group-settings {
+                display: flex;
+                justify-content: flex-start;
+                align-items: center;    
+                gap: 10px;
+            }
+
+            .form-group label {
+                margin-bottom: 5px; 
+            }
+
+            .text-label {
+                text-align: center;
+                align-self: flex-start;
+                font-size: 12px;
+                color: var(--cor-balance-label);
+                margin-left: 8px;
+            }
+
+            .text-label-country {
+                text-align: center;
+                align-self: flex-start;
+                font-size: 12px;
+                color: var(--cor-balance-label);
+                margin-left: 118px;
+            }
+
+            label {
+                color: var(--cor-preto);
+                margin-bottom: 10px;
+            }
+
+            input[type="text"], input[type="email"], select {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            input[type="number"], select {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            input[type="submit"] {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin-bottom: 10px;
+                margin-top: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            input[type="submit"]:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                width: 200px;
+                height: 40px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            #openmenu {
+                position: fixed; 
+                top: 80px;
+                left: 20px; 
+                padding: 10px 15px; 
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                border: none; 
+                border-radius: 5px; 
+                cursor: pointer; 
+                transition: background-color 0.3s; 
+                z-index: 1000; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+            }
+
+            #openmenu:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar {
+                width: 75px;
+                height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                background-color: #333;
+                color: var(--cor-balance-label);
+                overflow-x: hidden;
+                transition: 0.3s;
+                padding-top: 20px;
+                z-index: 1000;
+            }
+
+            .sidebar.active {
+                width: 300px;
+            }
+
+            .sidebar button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                background-color: transparent;
+                border: none;
+                color: var(--cor-balance-label);
+                width: 275px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            .sidebar .close-button {
+                background-color: var(--cor-amarelo-escuro);
+                color: black; 
+            }
+
+            .sidebar .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar:not(.active) button {
+                width: 55px;
+            }
+
+            .sidebar:not(.active) .menu-text {
+                display: none;
+            }
+
+            .sidebar button i {
+                margin-right: 8px;
+            }
+
+            .sidebar form {
+                margin: 0;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            select {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                text-align: center;
+            }
+
+            .close-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .openmenu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .openmenu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .forgetall-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .forgetall-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .logout-button, .back-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .logout-button:hover, .back-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .message {
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                width: 700px;
+                text-align: center;
+                margin-top: 10px;
+            }
+
+            .form-container {
+                display: flex; 
+                justify-content: center;
+                align-items: center;
+                gap: 20px; 
+                width: 70%; 
+                margin: 0 auto; 
+            }
+
+            .notification-message {
+                position: fixed;
+                top: 10%;
+                left: 50%;
+                transform: translate(-50%, -10%);
+                background-color: rgba(255, 255, 0, 0.9);
+                color: black;
+                padding: 10px 20px;
+                border-radius: 5px;
+                display: none;
+                font-size: 16px;
+                z-index: 1001;
+                width: 700px;
+                text-align: center;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                display: none;
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingSpinner {
+                border: 8px solid var(--cor-cinza);
+                border-top: 8px solid var(--cor-amarelo);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            .custom-label {
+                color: var(--cor-balance-label);
+                display: block !important;      
+                text-align: center !important;  
+                font-size: 22px;
+            }
+
+            .info-icon {
+                display: inline-block;
+                margin-left: 5px;
+                cursor: pointer;
+                color: var(--cor-balance-label);
+                font-size: 14px;
+            }
+
+            .info-icon:hover {
+                color: black;
+            }
+
+            .tooltip { /* Tooltip */
+                position: relative;
+                display: inline-block;
+            }
+
+            .tooltip .tooltip-text {
+                visibility: hidden;
+                width: 200px;
+                background-color: #000;
+                color: #fff;
+                text-align: center;
+                border-radius: 4px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                transform: translateX(-50%);
+                opacity: 0;
+                transition: opacity 0.3s;
+                font-size: 12px;
+            }
+
+            .tooltip:hover .tooltip-text {
+                visibility: visible;
+                opacity: 1;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                position: relative;
+                width: 420px;
+                height: 60px; 
+                overflow: visible;
+                box-sizing: border-box; 
+            }
+
+            .container img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover; 
+            }
+
+            .container span {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 300px;
+                height: 60px;
+                text-align: center; 
+            }
+
+            .container .dropdown {
+                width: 100px;
+                height: 60px;
+                position: relative;
+            }
+
+            .container button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 30px;
+                width: 100px;
+                text-align: center;
+            }
+
+            .icon {
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown-content {
+                background-color: var(--cor-cinza-claro);
+                border-radius: 5px;
+                padding: 10px;
+                list-style-type: none;
+                margin: 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                position: absolute;
+                z-index: 1;
+                width: 150px;
+                top: 45px;
+            }
+
+            .dropdown-content li {
+                padding: 10px;
+                color: var(--cor-preto);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .dropdown-content li:hover { /* Hover effect */
+                background-color: var(--cor-amarelo-escuro);
+                color: #fff;
+            }
+
+            .dropdown:hover .dropdown-content { /* Hover effect for the dropdown button */
+                display: block;
+            }
+
+            .xlm-balance-dropdown, .usdc-balance-dropdown, .eurc-balance-dropdown, .brl-balance-dropdown {
+                font-weight: bold;
+                margin-left: 10px;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                transition: background-color 0.3s ease;
+            }
+
+            .dropdown button:hover {
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+            }
+
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .balance-value {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .three-dots-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 5px 10px;
+                font-size: 16px;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .upload-box {
+                width: 100%;
+                max-width: 200px;
+                padding: 20px;
+                border: 2px dashed #007bff;
+                border-radius: 10px;
+                text-align: center;
+                cursor: pointer;
+            }
+
+            .upload-box.dragover {
+                background-color: #e9f5ff;
+            }
+            
+            .file-info {
+                margin-top: 10px;
+                font-size: 14px;
+            }
+
+            .header {
+                width: 100%;
+                background-color: var(--cor-header);
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: var(--cor-preto);
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header .app-name {
+                font-size: 24px;
+                margin-left: 70px;
+            }
+
+            .help-icon {
+                background-color: var(--button-bg-color);
+                color: var(--button-text-color);
+                border: none;
+                width: 15px; 
+                height: 15px;
+                border-radius: 50%; 
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .help-icon a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .help-icon:hover {
+                background-color: var(--button-hover-bg-color);
+            }
+
+            .notification-button {
+                margin-top: 10px;
+                padding: 8px 15px;
+                background-color: var(--cor-header);
+                color: black;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center; 
+                gap: 8px; 
+                width: auto; 
+            }
+
+            .notification-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo-escuro);
+            }
+
+            .form-group-viewForm {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px; 
+                width: 100%;
+            }
+
+            #name_settings,
+            #idnumber_settings,
+            #address_settings {
+                width: 420px;
+            }
+
+            #address_settings {
+                height: 100px;
+            }
+
+            textarea {
+                width: 420px;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                text-align: center;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <header class="header">
+            <div class="app-name">PocketBlock</div>
+            <button class="help-icon">
+                <a href="{{ url_for('help') }}"><i class="fas fa-question-circle"></i></a>
+            </button>
+        </header>
+
+        <!-- Dark screen with loading spinner -->
+        <div id="loadingOverlay">
+            <div id="loadingSpinner"></div>
+        </div>
+
+        <!-- Background overlay (used for modals and loading) -->
+        <div id="overlay" class="overlay"></div>
+
+        <!-- Message notification box (appears when an alert or info is triggered) -->
+        <div id="messageNotification" class="notification-message"></div>
+
+        <!-- Menu lateral -->
+        <div id="sidebar" class="sidebar">
+            <!-- Close menu -->
+            <button id="close" type="button" class="close-button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+                <span class="menu-text">Menu</span>
+            </button>
+            <!-- Main -->
+            <button class="back-button" onclick="showLoading(); location.href='{{ url_for('main') }}'" type="button">
+                <i class="fas fa-arrow-left"></i>
+                <span class="menu-text">Back</span>
+            </button>
+            <!-- Logout -->
+            <button id="logoutBtn" class="logout-button" onclick="handleLogout()" type="button">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="menu-text">Logout</span>
+            </button>
+        </div>
+
+        <form id="general" class="general" method="POST" action="{{ url_for('settings') }}" onsubmit="showLoading()">
+            <h1>Settings</h1>
+
+            <div class="info-block">
+                <p class="address-secret"><strong>Address:</strong> {{ keypair }} </p>
+                <p class="address-secret"><strong>Secret Key:</strong> {{ seed[:3] }}{{ '*' * 50 }}{{ seed[-3:] }} </p>
+            </div>
+
+            <div class="container">
+                <img id="asset-icon" class="icon" src="{{ url_for('static', filename='usdccoin.svg') }}" alt="Ativo">
+                <span class="balance-value" id="asset-balance"><strong>{{ usdc_balance }}</strong></span>
+                <div class="dropdown">
+                    <button class="three-dots-button">...</button>
+                    <ul class="dropdown-content">
+                        <li onclick="changeAsset('USDC', '{{ url_for('static', filename='usdccoin.svg') }}', {{ usdc_balance }})">
+                            USDC
+                        </li>
+                        <li onclick="changeAsset('EURC', '{{ url_for('static', filename='eurccoin.svg') }}', {{ eurc_balance }})">
+                            EURC
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        
+        </form>
+
+        <form id="viewForm" class="general" class="general">
+
+            <p for="setting-label" class="custom-label"><strong>Personal Information</strong></p>
+
+            <div class="form-group-viewForm">
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Name:</strong></p>
+                    </div>
+                    <span type="text" id="span_name_settings" name="span_name_settings">{{ settings.name }}</span>
+                </div>
+
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>ID Number:</strong></p>
+                    </div>
+                    <span type="text" id="span_idnumber_settings" name="span_idnumber_settings">{{ settings.idnumber }}</span>
+                </div>
+
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>E-mail:</strong></p>
+                    </div>
+                    <span type="text" id="span_email_settings" name="span_email_settings">{{ settings.email }}</span>
+                </div>
+
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Phone number:</strong></p>
+                    </div>
+                    <span type="text" id="span_phone_settings" name="span_phone_settings">{{ settings.phone_number }}</span>
+                </div>
+
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Address:</strong></p>
+                    </div>
+                    <span type="text" id="span_address_settings" name="span_address_settings">{{ settings.resaddress }}</span>
+                </div>
+
+                <div class="form-group-settings">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Country or Region:</strong></p>
+                    </div>
+                    <span type="text" id="span_country_settings" name="span_country_settings">{{ settings.country }}</span>
+                </div>
+            </div>
+
+            <button type="button" id="editButton" onclick="toggleForms()" onsubmit="showLoading();">Edit</button>
+
+            <button type="button" id="downloadButton" onclick="downloadBackup()" onsubmit="showLoading();">Download</button>
+
+        </form>
+
+        <!--
+        <form id="uploadBackupForm" class="general" method="POST" enctype="multipart/form-data" onsubmit="showLoading();">
+
+            <p for="setting-label" class="custom-label"><strong>Upload settings</strong></p>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Upload wallet_data.csv:</strong>
+                            <span class="tooltip">
+                                <i class="info-icon fas fa-info-circle"></i>
+                                <span class="tooltip-text">The file must contain wallet information in CSV format named "wallet_data.csv as the download backup"</span>
+                            </span>
+                        </p>
+                    </div>
+        
+        -->
+
+                    <!-- <input type="file" id="wallet_data" name="wallet_data" accept=".csv" required> -->
+
+        <!--
+    
+                    <div class="upload-box" id="dropZone">
+                        Arraste e solte um arquivo aqui ou clique para selecionar
+                        <input type="file" id="wallet_data" name="wallet_data" accept=".csv" style="display: none;" required>
+                        <div class="file-info" id="fileName">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                </div>
+                
+                <div class="form-group">
+                    <div class="text-label">
+                        <p for="setting-label"><strong>Upload settings.csv:</strong>
+                            <span class="tooltip">
+                                <i class="info-icon fas fa-info-circle"></i>
+                                <span class="tooltip-text">The file must contain settings information in CSV format named "settings.csv" as the download backup</span>
+                            </span>
+                        </p>
+                    </div>
+
+        -->
+
+                    <!-- <input type="file" id="settings_data" name="settings_data" accept=".csv" required> -->
+
+        <!--
+
+                    <div class="upload-box" id="dropZone">
+                        Arraste e solte um arquivo aqui ou clique para selecionar
+                        <input type="file" id="settings_data" name="settings_data" accept=".csv" style="display: none;" required>
+                        <div class="file-info" id="fileName">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                </div>
+            </div>
+        
+            <input type="submit" value="Upload Settings">
+
+        </form>
+
+        -->
+
+        <form id="editForm" class="general" method="POST" action="{{ url_for('settings') }}" style="display: none;" onsubmit="showLoading(); toggleForms();">
+
+            <p for="setting-label" class="custom-label"><strong>Personal Information</strong></p>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="setting-label">Name</label>
+                    </div>
+                    <input type="text" id="name_settings" name="name_settings" value="{{ settings.name }}" placeholder="Jhon Brady" required
+                    pattern="[A-Za-z\s]+" title="Name must contain only letters and spaces">
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="setting-label">ID number</label>
+                    </div>
+                    <input type="number" id="idnumber_settings" name="idnumber_settings" value="{{ settings.idnumber }}" pattern="\d{11}" minlength="11" maxlength="11" placeholder="00000000000" required>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="setting-label">E-mail</label>
+                    </div>
+                    <input type="email" id="email_settings" name="email_settings" value="{{ settings.email }}" placeholder="jhon-brady@pocketwallet.com" required>
+                </div>
+
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="setting-label">Phone number</label>
+                    </div>
+                    <input type="text" id="phone_settings" name="phone_settings" value="{{ settings.phone_number }}" placeholder="+55999999999" required
+                    pattern="^\+?[1-9]\d{1,14}$" title="Phone number must be in international format (e.g., +55999999999)">
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="setting-label">Address</label>
+                    </div>
+                    <textarea id="address_settings" name="address_settings" placeholder="5th Avenue, 321, New York - NY" required rows="5">{{ settings.resaddress }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label-country">
+                        <label for="country_settings">Country or Region</label>
+                    </div>
+                    <select id="country_settings" name="country_settings">
+                        <option value="BR" {% if settings.country == 'BR' %}selected{% endif %}>Brazil</option>
+                        <option value="US" {% if settings.country == 'US' %}selected{% endif %}>United States</option>
+                        <option value="PT" {% if settings.country == 'PT' %}selected{% endif %}>Portugal</option>
+                        <option value="ES" {% if settings.country == 'ES' %}selected{% endif %}>Spain</option>
+                        <option value="FR" {% if settings.country == 'FR' %}selected{% endif %}>France</option>
+                        <option value="DE" {% if settings.country == 'DE' %}selected{% endif %}>Germany</option>
+                        <option value="NA" {% if settings.country == 'NA' %}selected{% endif %}>Another</option>
+                    </select>
+                </div>
+            </div>
+
+            <input type="submit" value="Save">
+
+        </form>
+
+        <script>
+
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+
+            // Clears form fields on page load
+            window.onload = function() {
+                document.getElementById("general").reset();
+                document.getElementById("viewForm").reset();
+                document.getElementById("editForm").reset();
+            };
+
+            function toggleSidebar() {
+                document.getElementById("sidebar").classList.toggle("active");
+                document.querySelector(".content").classList.toggle("active");
+            }
+
+            // Fechar a sidebar quando clicar fora dela
+            window.addEventListener('click', function(event) {
+                var sidebar = document.getElementById('sidebar');
+                var openMenuButton = document.getElementById('openmenu');
+                    
+                // Verificar se o clique foi fora da sidebar e do botão do menu
+                if (!sidebar.contains(event.target) && !openMenuButton.contains(event.target)) {
+                    sidebar.classList.remove("active");
+                    document.querySelector(".content").classList.remove("active");
+                }
+            });
+
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            document.getElementById('logoutBtn').onclick = function() {
+                showLoading();
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            };
+
+            function handleLogout() {
+                showLoading(); // Exibe a tela de carregamento
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            }
+
+            // Função para exibir a notificação de mensagem
+            function showMessageNotification(message) {
+                const messageNotification = document.getElementById('messageNotification');
+
+                messageNotification.innerHTML = `
+
+                    <div>${message}</div>
+
+                    <button id="closeNotificationButton" class="notification-button close-btn">
+                        <i class="fas fa-times" style="margin-right: 2px;"></i>
+                    </button>
+                    
+                `;
+                
+                messageNotification.style.display = 'block';  // Exibe a notificação
+
+                // Função para fechar a notificação
+                const closeNotificationButton = document.getElementById('closeNotificationButton');
+                closeNotificationButton.onclick = function() {
+                    messageNotification.style.display = 'none'; // Fecha a notificação
+                };
+
+            }
+
+            // Exibir a mensagem de notificação se existir no template
+            {% if message %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    showMessageNotification("{{ message | safe }}");
+                });
+            {% endif %}
+
+            // Função para alternar entre os formulários
+            function toggleForms() {
+                const viewForm = document.getElementById('viewForm');
+                const editForm = document.getElementById('editForm');
+                const uploadBackupForm = document.getElementById('uploadBackupForm');
+
+                if (viewForm.style.display === 'none') {
+                    viewForm.style.display = 'block';
+                    editForm.style.display = 'none';
+                    uploadBackupForm.style.display = 'block';
+                } else {
+                    viewForm.style.display = 'none';
+                    editForm.style.display = 'block';
+                    uploadBackupForm.style.display = 'none';
+                }
+            }
+
+            function downloadBackup() {
+                fetch('/download/backup', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.blob();
+                        } else {
+                            return response.json().then(data => {
+                                throw new Error(data.message || "Unexpected error while creating the backup.");
+                            });
+                        }
+                    })
+                    .then(blob => {
+                        // Criação do link de download temporário
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'backup.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        showMessageNotification("Download completed successfully.");
+                    })
+                    .catch(error => {
+                        showMessageNotification(error.message);
+                        console.error(error);
+                    });
+            }
+
+            function changeAsset(name, icon, balance) {
+                document.getElementById('asset-icon').src = icon;
+                let assetBalanceElement = document.getElementById("asset-balance");
+                let formattedBalance = (parseFloat(balance)).toFixed(2);
+                assetBalanceElement.innerHTML = `<strong>${formattedBalance}</strong>`;
+            }
+
+        </script>
+
+    </body>
+</html>

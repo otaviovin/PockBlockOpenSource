@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock">
+        <style>
+            /* Estilos e cores definidos */
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .content {
+                margin-left: 0;
+                transition: margin-left 0.3s;
+            }
+
+            .general {
+                padding: 20px;
+                margin-top: 20px;
+                background-color: var(--cor-cinza);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%; 
+                max-width: 800px; 
+                box-sizing: border-box; 
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                width: 275px;
+                height: 40px;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 8px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .openmenu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .openmenu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            #openmenu {
+                position: fixed; 
+                top: 80px; 
+                left: 20px; 
+                padding: 10px; 
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                border: none; 
+                border-radius: 5px;
+                cursor: pointer; 
+                transition: background-color 0.3s; 
+                z-index: 1000; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+            }
+
+            #openmenu:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar {
+                width: 75px;
+                height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0; 
+                background-color: #333;
+                color: var(--cor-balance-label);
+                overflow-x: hidden;
+                transition: 0.3s;
+                padding-top: 20px;
+                z-index: 1000;
+            }
+
+            .sidebar.active {
+                width: 300px;
+            }
+
+            .sidebar button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                background-color: transparent;
+                border: none;
+                color: var(--cor-balance-label);
+                width: 275px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            .sidebar .close-button {
+                background-color: var(--cor-amarelo-escuro);
+                color: black; 
+            }
+
+            .sidebar .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar:not(.active) button {
+                width: 55px;
+            }
+
+            .sidebar:not(.active) .menu-text {
+                display: none;
+            }
+
+            .sidebar button i {
+                margin-right: 8px;
+            }
+
+            .sidebar form {
+                margin: 0;
+            }
+
+            .content.active {
+                margin-left: 250px;
+            }
+
+            #secretKeyField {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 12px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 5px;
+                margin-right: 10px;
+                width: 450px; 
+                box-sizing: border-box; 
+            }
+
+            .copy-button {
+                padding: 5px 10px;
+                margin-left: 10px;
+                font-size: 14px;
+                width: auto;
+            }
+
+            .close-button,
+            .forgetall-button,
+            .logout-button,
+            .menu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .close-button:hover,
+            .forgetall-button:hover,
+            .logout-button:hover,
+            .menu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .btnMain {
+                background-color: #b8860b;
+                height: 80px;
+                width: 180px;
+                border: none;
+                border-radius: 5px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 24px;
+            }
+
+            .btnMain i {
+                font-size: 40px;
+            }
+
+            .notification {
+                display: none;
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                padding: 10px;
+                border-radius: 5px;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                z-index: 1000;
+            }
+
+            a {
+                color: var(--cor-amarelo);
+                text-decoration: none;
+                font-size: 18px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            select {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                margin: 10px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+                text-align: center; /
+            }
+
+            input[type="password"] {
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            input[type="text"] {
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                box-sizing: border-box;
+            }
+
+            .info-balance {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .balance-title {
+                margin-bottom: 1px;
+                margin-top: 1px;
+            }
+
+            .xlm-balance {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .xlm-label {
+                color: var(--cor-balance-label); 
+                font-size: 12px; 
+            }
+
+            .usdc-balance {
+                color: var(--cor-balance-value);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .usdc-label {
+                color: var(--cor-balance-label);
+                font-size: 12px;
+            }
+
+            .eurc-balance {
+                color: var(--cor-balance-value);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .eurc-label {
+                color: var(--cor-balance-label);
+                font-size: 12px; 
+            }
+
+            .brl-balance {
+                color: var(--cor-balance-value);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .brl-label {
+                color: var(--cor-balance-label);
+                font-size: 12px;
+            }
+
+            .info-item {
+                display: flex;
+                align-items: center;
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingSpinner {
+                border: 8px solid var(--cor-cinza);
+                border-top: 8px solid var(--cor-amarelo);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                position: relative;
+                width: 420px;
+                height: 60px;
+                overflow: visible;
+                box-sizing: border-box;
+                margin-top: 10px;
+            }
+
+            .container img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover; 
+            }
+
+            .container span {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 300px;
+                height: 60px;
+                text-align: center; 
+            }
+
+            .container .dropdown {
+                width: 100px;
+                height: 60px;
+                position: relative;
+            }
+
+            .container button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 30px;
+                width: 100px;
+                text-align: center;
+            }
+
+            .icon {
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown-content {
+                background-color: var(--cor-cinza-claro);
+                border-radius: 5px;
+                padding: 10px;
+                list-style-type: none;
+                margin: 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                position: absolute;
+                z-index: 1;
+                width: 150px;
+                top: 45px;
+            }
+
+            .dropdown-content li {
+                padding: 10px;
+                color: var(--cor-preto);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .dropdown-content li:hover {
+                background-color: var(--cor-amarelo-escuro);
+                color: #fff;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .xlm-balance-dropdown, .usdc-balance-dropdown, .eurc-balance-dropdown, .brl-balance-dropdown {
+                font-weight: bold;
+                margin-left: 10px;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                transition: background-color 0.3s ease;
+            }
+
+            .dropdown button:hover {
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+            }
+
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .balance-value {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .three-dots-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 5px 10px;
+                font-size: 16px;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .header {
+                width: 100%;
+                background-color: var(--cor-header);
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: var(--cor-preto);
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header .app-name {
+                font-size: 24px;
+                margin-left: 70px;
+            }
+
+            .help-icon {
+                background-color: var(--button-bg-color);
+                color: var(--button-text-color);
+                border: none;
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .help-icon a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .help-icon:hover {
+                background-color: var(--button-hover-bg-color);
+            }
+
+        </style>
+    </head>
+
+    <body>
+
+        <header class="header">
+            <div class="app-name">PocketBlock</div>
+            <button class="help-icon">
+                <a href="{{ url_for('help') }}"><i class="fas fa-question-circle"></i></a>
+            </button>
+        </header>
+
+        <!-- Tela de carregamento -->
+        <div id="loadingOverlay">
+            <div id="loadingSpinner"></div>
+        </div>
+
+        <!-- Menu lateral -->
+        <div id="sidebar" class="sidebar">
+            <!-- Close menu -->
+            <button id="close" type="button" class="close-button" onclick="toggleSidebar()">
+                <i id="toggleIcon" class="fas fa-bars"></i>
+                <span class="menu-text">Menu</span>
+            </button>
+            <!-- Create Account -->
+            <button id="createAccountBtn" class="menu-button" type="button" onclick="showLoading(); location.href='{{ url_for('create_account') }}'">
+                <i class="fas fa-wallet" style="margin-right: 8px;"></i>
+                <span class="menu-text">Create Account</span>
+            </button>
+            <!-- Account Data -->
+            <button id="accountDataBtn" class="menu-button" type="button" onclick="showLoading(); location.href='{{ url_for('account_data') }}'">
+                <i class="fas fa-database" style="margin-right: 8px;"></i>
+                <span class="menu-text">Account Data</span>
+            </button>
+            <!-- Buy -->
+            <button id="buyxlmBtn" class="menu-button" type="button" onclick="showLoading(); location.href='{{ url_for('buy') }}'">
+                <i class="fas fa-coins" style="margin-right: 8px;"></i>
+                <span class="menu-text">Buy</span>
+            </button>
+            <!-- Settings -->
+            <button id="settingsBtn" class="menu-button" type="button" onclick="showLoading(); location.href='{{ url_for('settings') }}'">
+                <i class="fas fa-cogs" style="margin-right: 8px;"></i>
+                <span class="menu-text">Settings</span>
+            </button>
+            <!-- Forget All -->
+            <form id="forgetAllForm" method="POST" action="{{ url_for('forget_all') }}">
+                <button id="forgetAllBtn" class="forgetall-button" type="submit" onclick="showLoading()">
+                    <i class="fas fa-trash" style="margin-right: 8px;"></i>
+                    <span class="menu-text">Forget All</span>
+                </button>
+            </form>
+            <!-- Forget Account -->
+            <form id="forgetAccountForm" method="POST" action="{{ url_for('forget_account') }}">
+                <input type="hidden" name="selected_keypair" value="{{ keypair }}">
+                <button id="forgetAccountBtn" class="forgetall-button" type="submit" onclick="showLoading()">
+                    <i class="fas fa-trash" style="margin-right: 8px;"></i>
+                    <span class="menu-text">Forget Account</span>
+                </button> 
+            </form>
+        
+            <form id="logoutForm" method="POST" action="{{ url_for('logout') }}">
+                <button id="logoutBtn" class="logout-button" type="submit" onclick="showLoading()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="menu-text">Logout</span>
+                </button>
+            </form>
+        </div>
+
+        <form id="general" class="general">
+            <h1>Welcome</h1>
+
+            <!-- Notificação de cópia -->
+            <div id="notification" class="notification">Copied to clipboard!</div>
+
+            <!-- Selecionar a conta desejada -->
+            <label for="account"><strong>Account:</strong></label>
+            <form id="selectAccountForm" method="POST" action="{{ url_for('select_account') }}">
+                <select id="account" name="selected_keypair" onchange="showLoading(); this.form.submit();">
+                    {% for account in accounts %}
+                        <option value="{{ account.keypair }}" {% if account.keypair == session['keypair'] %}selected{% endif %}>
+                            {{ account.keypair }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <div class="container">
+                    <img id="asset-icon" class="icon" src="{{ url_for('static', filename='usdccoin.svg') }}" alt="Ativo">
+                    <span class="balance-value" id="asset-balance"><strong>{{ usdc_balance }}</strong></span>
+                    <div class="dropdown">
+                        <button class="three-dots-button">...</button>
+                        <ul class="dropdown-content">
+                            <!-- <li onclick="changeAsset('XLM', '{{ url_for('static', filename='XLM_logo.png') }}', {{ xlm_balance }})">
+                                XLM
+                            </li> -->
+                            <li onclick="changeAsset('USDC', '{{ url_for('static', filename='usdccoin.svg') }}', {{ usdc_balance }})">
+                                USDC
+                            </li>
+                            <li onclick="changeAsset('EURC', '{{ url_for('static', filename='eurccoin.svg') }}', {{ eurc_balance }})">
+                                EURC
+                            </li>
+                            <!-- <li onclick="changeAsset('BRLC', '{{ url_for('static', filename='BRLC_logo.png') }}', {{ brl_balance }})">
+                                BRLC
+                            </li> -->
+                        </ul>
+                    </div>
+                </div>            
+
+                <!-- <div class="info-balance"></div>
+                <p class="balance-title"><strong>Balance:</strong></p>
+                <p>
+                    <span class="xlm-balance"><strong>{{ xlm_balance }}</strong></span> 
+                    <span class="currency-label xlm-label">XLM</span><br>
+
+                    <span class="usdc-balance"><strong>{{ usdc_balance }}</strong></span> 
+                    <span class="currency-label usdc-label">USDC</span><br>
+
+                    <span class="eurc-balance"><strong>{{ eurc_balance }}</strong></span> 
+                    <span class="currency-label eurc-label">EURC</span><br>
+
+                    <span class="brl-balance"><strong>{{ brl_balance }}</strong></span> 
+                    <span class="currency-label brl-label">BRL</span>
+                </p> -->
+
+            </form>
+
+            <form>
+                <div style="display: flex; gap: 10px;">
+                    <button id="transactionBtn" type="button" onclick="showLoading(); location.href='{{ url_for('transaction') }}'" class="btnMain"><i class="fas fa-exchange-alt"> </i></button>
+                    <button id="receiveBtn" type="button" onclick="showLoading(); location.href='{{ url_for('receive') }}'" class="btnMain"><i class="fas fa-arrow-down"></i></button>
+                    <button id="withdrawBtn" type="button" onclick="showLoading(); location.href='{{ url_for('withdraw') }}'" class="btnMain"><i class="fas fa-wallet"></i></button>
+                </div>
+            </form>
+
+            <div class="info-block">
+                <div class="info-item">
+                    <p><strong id="keypair" name="keypair">Address:</strong> {{ session['keypair'] }}</p>
+                    <button class="copy-button" onclick="copyToClipboard('{{ session['keypair'] }}')"> <i class="fas fa-copy" style="margin-right: 5px;"></i> </button>
+                </div>
+                <div class="info-item">
+                    <p><strong id="seed" name="seed">Secret Key:</strong></p>
+                    <input type="password" id="secretKeyField" value="{{ session['seed'] }}" readonly>
+                    <button id="toggleVisibilityButton" class="copy-button" onclick="toggleSecretKeyVisibility()"> <i class="fas fa-eye-slash" style="margin-right: 5px;"></i> </button>
+                    <button class="copy-button" onclick="copyToClipboard('{{ session['seed'] }}')"> <i class="fas fa-copy" style="margin-right: 5px;"></i> </button>
+                </div>
+            </div>
+        </form>
+
+        <script>
+
+            function toggleSidebar() {
+                document.getElementById("sidebar").classList.toggle("active");
+                document.querySelector(".content").classList.toggle("active");
+            }
+
+            // Fechar a sidebar quando clicar fora dela
+            window.addEventListener('click', function(event) {
+                var sidebar = document.getElementById('sidebar');
+                var openMenuButton = document.getElementById('openmenu');
+                
+                // Verificar se o clique foi fora da sidebar e do botão do menu
+                if (!sidebar.contains(event.target) && !openMenuButton.contains(event.target)) {
+                    sidebar.classList.remove("active");
+                    document.querySelector(".content").classList.remove("active");
+                }
+            });
+
+            function toggleSecretKeyVisibility() {
+                const secretKeyField = document.getElementById('secretKeyField');
+                // const button = event.target;
+                const button = document.getElementById('toggleVisibilityButton');
+                const icon = button.querySelector('i');
+
+                if (secretKeyField.type === "password") {
+                    secretKeyField.type = "text";
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                } else {
+                    secretKeyField.type = "password";
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            }
+
+            function saveNetwork() {
+                let network = document.getElementById('network').value;
+                showLoading();
+                fetch('{{ url_for('save_network') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'network=' + encodeURIComponent(network)
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Failed to save network. Please try again.');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    const notification = document.getElementById('notification');
+                    notification.style.display = 'block';
+                    setTimeout(function() {
+                        notification.style.display = 'none';
+                    }, 2000);
+                }).catch(function(error) {
+                    console.error('Failed to copy text: ', error);
+                });
+            }
+
+            function changeAsset(name, icon, balance) {
+                document.getElementById('asset-icon').src = icon;
+                let assetBalanceElement = document.getElementById("asset-balance");
+                let formattedBalance = (parseFloat(balance)).toFixed(2);
+                assetBalanceElement.innerHTML = `<strong>${formattedBalance}</strong>`;
+            }
+
+            document.getElementById('forgetAllForm').onsubmit = function() {
+                showLoading();
+            };
+
+            document.getElementById('forgetAccountForm').onsubmit = function() {
+                showLoading();
+            };
+
+            document.getElementById('logoutForm').onsubmit = function() {
+                showLoading();
+            };
+
+        </script>
+    </body>
+</html>

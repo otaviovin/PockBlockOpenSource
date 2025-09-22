@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Create Account</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <meta name="description" content="PocketBlock - Create Account">
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            body {
+                background-color: var(--cor-cinza-claro);
+                color: var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace; 
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .general {
+                padding: 20px;
+                margin-top: 20px;
+                background-color: var(--cor-cinza);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%; 
+                max-width: 800px; 
+                box-sizing: border-box; 
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                color: var(--cor-preto);
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+
+            p {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            .address-secret {
+                background-color: var(--cor-amarelo);
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+                width: 100%;
+            }
+
+            input[type="submit"] {
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+            }
+
+            form {
+                background-color: var(--cor-cinza);
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 800px;
+                margin-bottom: 10px;
+            }
+
+            label {
+                color: var(--cor-preto);
+                margin-bottom: 10px;
+            }
+
+            .text-label {
+                color: var(--cor-balance-label);
+                font-size: 12px;
+                margin-left: 8px;
+            }
+
+            input[type="text"], select, input[type="password"], select {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid var(--cor-preto);
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+                box-sizing: border-box;
+            }
+
+            input[type="submit"] {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+            }
+
+            input[type="submit"]:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                margin: 10px;
+                cursor: pointer;
+                font-size: 16px;
+                width: 200px;
+                height: 40px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease; 
+            }
+
+            #openmenu {
+                position: fixed; 
+                top: 80px; 
+                left: 20px;
+                padding: 10px 15px;
+                background-color: var(--cor-amarelo);
+                color: var(--cor-preto);
+                border: none;
+                border-radius: 5px; 
+                cursor: pointer;
+                transition: background-color 0.3s; 
+                z-index: 1000; 
+                display: flex;
+                align-items: center; 
+                justify-content: center; 
+            }
+
+            #openmenu:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar {
+                width: 75px; 
+                height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0; 
+                background-color: #333;
+                color: var(--cor-balance-label);
+                overflow-x: hidden;
+                transition: 0.3s;
+                padding-top: 20px;
+                z-index: 1000;
+            }
+
+            .sidebar.active {
+                width: 300px;
+            }
+
+            .sidebar button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                background-color: transparent;
+                border: none;
+                color: var(--cor-balance-label);
+                width: 275px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                border-radius: 30px;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            .sidebar .close-button {
+                background-color: var(--cor-amarelo-escuro);
+                color: black; 
+            }
+
+            .sidebar .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .sidebar:not(.active) button {
+                width: 55px;
+            }
+
+            .sidebar:not(.active) .menu-text {
+                display: none;
+            }
+
+            .sidebar button i {
+                margin-right: 8px;
+            }
+
+            .sidebar form {
+                margin: 0;
+            }
+
+            button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .info-item {
+                display: flex;
+                align-items: center;
+            }
+
+            .close-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .close-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .openmenu-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .openmenu-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .logout-button, .back-button {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .logout-button:hover, .back-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo);
+            }
+
+            .message {
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                width: 700px;
+                text-align: center;
+                margin-top: 10px;
+            }
+
+            .notification-message {
+                position: fixed;
+                top: 10%;
+                left: 50%;
+                transform: translate(-50%, -10%);
+                background-color: rgba(255, 255, 0, 0.9);
+                color: black;
+                padding: 10px 20px;
+                border-radius: 5px;
+                display: none;
+                font-size: 16px;
+                z-index: 1001;
+                width: 700px;
+                text-align: center;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                display: none;
+            }
+
+            #createaccountForm {
+                display: flex;
+                justify-content: space-between; 
+                align-items: center;
+            }
+
+            .form-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                margin-right: 20px; 
+                margin-left: 20px; 
+            }
+
+            .form-group label {
+                margin-bottom: 5px; 
+            }
+
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            #loadingOverlay.show {
+                display: flex;
+            }
+
+            #loadingSpinner {
+                border: 8px solid var(--cor-cinza);
+                border-top: 8px solid var(--cor-amarelo);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                position: relative;
+                width: 420px;
+                height: 60px; 
+                overflow: visible;
+                box-sizing: border-box;
+            }
+
+            .container img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover; 
+            }
+
+            .container span {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 300px;
+                height: 60px;
+                text-align: center; 
+            }
+
+            .container .dropdown {
+                width: 100px;
+                height: 60px;
+                position: relative;
+            }
+
+            .container button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 30px;
+                width: 100px;
+                text-align: center;
+            }
+
+            .icon {
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100px;
+                height: 60px;
+            }
+
+            .dropdown-content {
+                background-color: var(--cor-cinza-claro);
+                border-radius: 5px;
+                padding: 10px;
+                list-style-type: none;
+                margin: 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                position: absolute;
+                z-index: 1;
+                width: 150px;
+                top: 45px;
+            }
+
+            .dropdown-content li {
+                padding: 10px;
+                color: var(--cor-preto);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .dropdown-content li:hover {
+                background-color: var(--cor-amarelo-escuro);
+                color: #fff;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .xlm-balance-dropdown, .usdc-balance-dropdown, .eurc-balance-dropdown, .brl-balance-dropdown {
+                font-weight: bold; 
+                margin-left: 10px; 
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                transition: background-color 0.3s ease;
+            }
+
+            .dropdown button:hover {
+                background-color: var(--cor-amarelo); 
+                color: var(--cor-preto); 
+            }
+
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+            }
+
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+
+            .balance-value {
+                color: var(--cor-balance-value); 
+                font-family: 'OCR A Std', 'Courier', monospace;
+                font-size: 30px;
+            }
+
+            .three-dots-button {
+                background-color: var(--cor-amarelo);
+                border: none;
+                color: var(--cor-preto);
+                padding: 5px 10px;
+                font-size: 16px;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            select {
+                background-color: var(--cor-amarelo);
+                border: 1px solid var(--cor-preto);
+                color: var(--cor-preto);
+                padding: 10px;
+                font-size: 16px;
+                font-family: 'OCR A Std', 'Courier', monospace;
+                width: 200px;
+                border-radius: 30px !important;
+                transition: background-color 0.3s ease;
+                text-align: center; 
+            }
+
+            .header {
+                width: 100%;
+                background-color: var(--cor-header);
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: var(--cor-preto);
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header .app-name {
+                font-size: 24px;
+                margin-left: 70px;
+            }
+
+            .help-icon {
+                background-color: var(--button-bg-color); 
+                color: var(--button-text-color);
+                border: none;
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .help-icon a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .help-icon:hover {
+                background-color: var(--button-hover-bg-color);
+            }
+
+            .notification-button {
+                margin-top: 10px;
+                padding: 8px 15px;
+                background-color: var(--cor-header);
+                color: black;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center; 
+                gap: 8px; 
+                width: auto; 
+            }
+
+            .notification-button:hover {
+                background-color: var(--cor-preto);
+                color: var(--cor-amarelo-escuro);
+            }
+
+        </style>
+    </head>
+
+    <body>
+
+        <!-- Top header with app name and help icon -->
+        <header class="header">
+            <div class="app-name">PocketBlock</div>
+            <button class="help-icon">
+                <a href="{{ url_for('help') }}"><i class="fas fa-question-circle"></i></a>
+            </button>
+        </header>
+
+        <!-- Dark screen with loading spinner -->
+        <div id="loadingOverlay">
+            <div id="loadingSpinner"></div>
+        </div>
+
+        <!-- Background overlay (used for modals and loading) -->
+        <div id="overlay" class="overlay"></div>
+
+        <!-- Message notification box (appears when an alert or info is triggered) -->
+        <div id="messageNotification" class="notification-message"></div>
+
+        <!-- Sidebar navigation menu -->
+        <div id="sidebar" class="sidebar">
+            <!-- Button to close the sidebar -->
+            <button id="close" type="button" class="close-button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+                <span class="menu-text">Menu</span>
+            </button>
+            <!-- Redirect to main page -->
+            <button class="back-button" onclick="showLoading(); location.href='{{ url_for('main') }}'" type="button">
+                <i class="fas fa-arrow-left"></i>
+                <span class="menu-text">Back</span>
+            </button>
+            <!-- Logout button -->
+            <button id="logoutBtn" class="logout-button" onclick="handleLogout()" type="button">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="menu-text">Logout</span>
+            </button>
+        </div>
+
+        <!-- Read-only wallet info section (created keypair and secret) -->
+        <form id="general" class="general">
+            <h1>Create Account</h1>
+
+            <div class="info-block">
+                <p class="address-secret"><strong>Address:</strong> {{ keypair }} </p>
+                <p class="address-secret"><strong>Secret Key:</strong> {{ seed[:3] }}{{ '*' * 50 }}{{ seed[-3:] }} </p>
+            </div>
+
+            <!-- Asset balance display with dropdown to switch asset -->
+            <div class="container">
+                <img id="asset-icon" class="icon" src="{{ url_for('static', filename='usdccoin.svg') }}" alt="Ativo">
+                <span class="balance-value" id="asset-balance"><strong>{{ usdc_balance }}</strong></span>
+                <div class="dropdown">
+                    <button class="three-dots-button">...</button>
+                    <ul class="dropdown-content">
+                        <li onclick="changeAsset('USDC', '{{ url_for('static', filename='usdccoin.svg') }}', {{ usdc_balance }})">
+                            USDC
+                        </li>
+                        <li onclick="changeAsset('EURC', '{{ url_for('static', filename='eurccoin.svg') }}', {{ eurc_balance }})">
+                            EURC
+                        </li>
+                    </ul>
+                </div>
+            </div>
+                
+        </form>
+
+        <!-- Account creation form -->
+        <form id="createaccountForm" class="general" method="POST" action="{{ url_for('create_account') }}" onsubmit="showLoading()">
+
+            <!-- Asset selection dropdown -->
+            <div class="form-container">
+                <div class="form-group">
+                    <select id="asset_code" name="asset_code" required>
+                        <!--
+                        <option value="XLM">XLM</option>
+                        -->
+                        <option value="USDC">USDC</option>
+                        <option value="EURC">EURC</option>
+                        <!--
+                        <option value="BRLC">BRLC</option>
+                        -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="amount">Amount new account</label>
+                    </div>  
+                    <input type="text" id="amount" name="amount" step="0.01" min="0" placeholder="100.00" required>
+                </div>
+            
+                <div class="form-group">
+                    <div class="text-label">
+                        <label for="password">Password new account</label>
+                    </div>
+                    <input type="password" id="password" name="password" placeholder="******" required>
+                </div>
+            </div>
+        
+            <!-- Submit button to create the account -->
+            <button type="submit">Create Account</button>
+
+        </form>   
+
+        <script>
+
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+
+            // Clears form fields on page load
+            window.onload = function() {
+                document.getElementById("general").reset();
+                document.getElementById("createaccountForm").reset();
+            };
+
+            // Toggle the visibility of the sidebar            
+            function toggleSidebar() {
+                document.getElementById("sidebar").classList.toggle("active");
+                document.querySelector(".content").classList.toggle("active");
+            }
+
+            // Close the sidebar when clicking outside of it
+            window.addEventListener('click', function(event) {
+                var sidebar = document.getElementById('sidebar');
+                var openMenuButton = document.getElementById('openmenu');
+                    
+                // If click is outside the sidebar and menu button, close the sidebar
+                if (!sidebar.contains(event.target) && !openMenuButton.contains(event.target)) {
+                    sidebar.classList.remove("active");
+                    document.querySelector(".content").classList.remove("active");
+                }
+            });
+
+            // Handle logout: show loading and perform POST logout request
+            function handleLogout() {
+                showLoading(); // Exibe a tela de carregamento
+                fetch('{{ url_for('logout') }}', {method: 'POST'})
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    });
+            }
+
+            // Display the loading overlay
+            function showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            // Trigger loading overlay when submitting the create account form
+            document.getElementById('createaccountForm').onsubmit = function() {
+                showLoading();
+            };
+
+            // Show message notification with text
+            function showMessageNotification(message) {
+                const messageNotification = document.getElementById('messageNotification');
+
+                // Add message and action buttons
+                messageNotification.innerHTML = `
+
+                    <div>${message}</div>
+
+                    <button id="closeNotificationButton" class="notification-button close-btn">
+                        <i class="fas fa-times" style="margin-right: 2px;"></i>
+                    </button>
+                    
+                `;
+
+                messageNotification.style.display = 'block'; 
+
+                // Close notification
+                const closeNotificationButton = document.getElementById('closeNotificationButton');
+                closeNotificationButton.onclick = function() {
+                    messageNotification.style.display = 'none';
+                };
+            }
+
+            // If a message was passed from the backend, show it on load
+            {% if message %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    showMessageNotification(`{{ message | safe }}`);
+                });
+            {% endif %}
+
+            // Change asset icon and balance on screen
+            function changeAsset(name, icon, balance) {
+                document.getElementById('asset-icon').src = icon;
+                let assetBalanceElement = document.getElementById("asset-balance");
+                let formattedBalance = (parseFloat(balance)).toFixed(2);
+                assetBalanceElement.innerHTML = `<strong>${formattedBalance}</strong>`;
+            }
+
+        </script>
+    </body>
+</html>

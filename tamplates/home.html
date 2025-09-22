@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PocketBlock - Your Bridge to Digital Finance</title>
+        <link rel="icon" href="{{ url_for('static', filename='pocketblock_logo_3.png') }}" type="image/x-icon">
+        <meta name="description" content="PocketBlock - Home">
+        <script src="https://unpkg.com/lucide@latest"></script>
+
+        <style>
+
+            :root {
+                --cor-preto: #000000;
+                --cor-cinza-claro: #d3d3d3;
+                --cor-cinza: #b0b0b0;
+                --cor-header: #8B8000;
+                --cor-amarelo: #ffd700;
+                --cor-amarelo-escuro: #ffc107;
+                --overlay-bg: rgba(0, 0, 0, 0.8);
+                --cor-balance-value: #4d4d4d;
+                --cor-balance-label: #8B8000;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                background-color: var(--cor-preto);
+                color: white;
+                line-height: 1.6;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 1.5rem;
+            }
+
+            .hero-pattern { /* Hero Pattern */
+                margin-top: 10px;
+                background-color: var(--cor-preto);
+                background-image: radial-gradient(var(--cor-header) 0.5px, transparent 0.5px);
+                background-size: 15px 15px;
+            }
+
+            nav { /* Navigation */
+                padding: 1rem 0;
+            }
+
+            .nav-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .logo-text {
+                font-size: 1.25rem;
+                font-weight: bold;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            @media (min-width: 768px) {
+                .nav-links {
+                    display: flex;
+                    gap: 2rem;
+                }
+            }
+
+            .nav-links a {
+                color: white;
+                text-decoration: none;
+                transition: color 0.3s;
+            }
+
+            .nav-links a:hover {
+                color: var(--cor-amarelo);
+            }
+
+            /* Buttons */
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border-radius: 9999px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                border: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .btn-primary {
+                background-color: var(--cor-amarelo);
+                color: black;
+            }
+
+            .btn-primary:hover {
+                background-color: var(--cor-amarelo-escuro);
+            }
+
+            .btn-outline {
+                background-color: transparent;
+                border: 2px solid var(--cor-amarelo);
+                color: var(--cor-amarelo);
+            }
+
+            .btn-outline:hover {
+                background-color: var(--cor-amarelo);
+                color: black;
+            }
+
+            .btn.large {
+                padding: 1rem 3rem;
+                font-size: 1.125rem;
+            }
+
+            /* Hero Section */
+            .hero-section {
+                padding: 5rem 0;
+            }
+
+            .hero-content {
+                display: flex;
+                flex-direction: column;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .hero-content {
+                    flex-direction: row;
+                    align-items: center;
+                }
+
+                .hero-text {
+                    width: 50%;
+                }
+
+                .hero-image {
+                    width: 50%;
+                }
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+                font-weight: bold;
+                margin-bottom: 1.5rem;
+            }
+
+            @media (min-width: 768px) {
+                .hero-text h1 {
+                    font-size: 3.75rem;
+                }
+            }
+
+            .hero-text p {
+                font-size: 1.125rem;
+                color: var(--cor-cinza-claro);
+                margin-bottom: 2rem;
+            }
+
+            .button-group {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .hero-image img {
+                width: 100%;
+                border-radius: 0.5rem;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+
+            /* Gradient Text */
+            .gradient-text {
+                background: linear-gradient(45deg, var(--cor-amarelo), var(--cor-amarelo-escuro));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            /* Icons */
+            .icon-yellow {
+                color: var(--cor-amarelo);
+            }
+
+            .icon-yellow.large {
+                width: 4rem;
+                height: 4rem;
+            }
+
+            /* Features Section */
+            .features-section {
+                padding: 5rem 0;
+                background-color: black;
+            }
+
+            .features-section h2 {
+                font-size: 1.875rem;
+                text-align: center;
+                margin-bottom: 4rem;
+            }
+
+            .features-grid {
+                display: grid;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .features-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            .feature-card {
+                background-color: #111;
+                padding: 2rem;
+                border-radius: 0.5rem;
+                transition: transform 0.3s;
+            }
+
+            .feature-card:hover {
+                transform: scale(1.05);
+            }
+
+            .feature-card i {
+                margin-bottom: 1.5rem;
+                width: 2rem;
+                height: 2rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.25rem;
+                margin-bottom: 1rem;
+            }
+
+            .feature-card p {
+                color: var(--cor-cinza-claro);
+            }
+
+            /* How It Works Section */
+            .how-it-works-section {
+                padding: 5rem 0;
+                background-color: #111;
+            }
+
+            .how-it-works-section h2 {
+                font-size: 1.875rem;
+                text-align: center;
+                margin-bottom: 4rem;
+            }
+
+            .how-it-works-grid {
+                display: grid;
+                gap: 3rem;
+            }
+
+            @media (min-width: 768px) {
+                .how-it-works-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            .steps {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .step {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .step-number {
+                color: var(--cor-amarelo);
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+
+            .step-content h3 {
+                font-size: 1.25rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .step-content p {
+                color: var(--cor-cinza-claro);
+            }
+
+            .trading-card {
+                background-color: var(--cor-header);
+                padding: 2rem;
+                border-radius: 0.5rem;
+            }
+
+            .trading-card i {
+                width: 4rem;
+                height: 4rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .trading-card h3 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .trading-card p {
+                color: var(--cor-cinza-claro);
+            }
+
+            /* CTA Section */
+            .cta-section {
+                padding: 5rem 0;
+                text-align: center;
+            }
+
+            .cta-section i {
+                margin-bottom: 2rem;
+            }
+
+            .cta-section h2 {
+                font-size: 2.25rem;
+                margin-bottom: 2rem;
+            }
+
+            @media (min-width: 768px) {
+                .cta-section h2 {
+                    font-size: 2.5rem;
+                }
+            }
+
+            /* Footer */
+            footer {
+                background-color: black;
+                padding: 3rem 0;
+            }
+
+            .footer-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+            }
+
+            @media (min-width: 768px) {
+                .footer-content {
+                    flex-direction: row;
+                    justify-content: space-between;
+                }
+            }
+
+            .footer-links {
+                display: flex;
+                gap: 2rem;
+            }
+
+            .footer-links a {
+                color: var(--cor-cinza);
+                text-decoration: none;
+                transition: color 0.3s;
+            }
+
+            .footer-links a:hover {
+                color: var(--cor-amarelo);
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+        <div class="min-h-screen">
+            <!-- Hero Section -->
+            <div class="hero-pattern">
+                <nav class="container">
+                    <div class="nav-content">
+                        <div class="logo">
+                            <i data-lucide="coins" class="icon-yellow"></i>
+                            <span class="logo-text">PocketBlock</span>
+                        </div>
+                        <div class="nav-links">
+                            <a href="#features">Features</a>
+                            <a href="#how-it-works">How it Works</a>
+                            <a href="#contact">Contact</a>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.location.href='{{ url_for('login') }}';">Get Started</button>
+                    </div>
+                </nav>
+
+                <div class="container hero-section">
+                    <div class="hero-content">
+                        <div class="hero-text">
+                            <h1>Your Bridge to <span class="gradient-text">Digital Finance</span></h1>
+                            <p>Transfer USDC and EURC seamlessly. Buy with Credit Card, withdraw to your bank account. The future of finance is here.</p>
+                            <div class="button-group">
+                                <button class="btn btn-primary" onclick="window.location.href='{{ url_for('login') }}';">
+                                    Start
+                                    <i data-lucide="arrow-right"></i>
+                                </button>
+                                <button class="btn btn-outline">Learn More</button>
+                            </div>
+                        </div>
+                        <div class="hero-image">
+                            <img src="https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&fit=crop&w=600" 
+                                alt="Cryptocurrency visualization">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <section id="features" class="features-section">
+                <div class="container">
+                    <h2><span class="gradient-text">Why Choose Us</span></h2>
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <i data-lucide="wallet" class="icon-yellow"></i>
+                            <h3>Stablecoin Support</h3>
+                            <p>Trade USDC and EURC with confidence. Stable value, global reach.</p>
+                        </div>
+                        <div class="feature-card">
+                            <i data-lucide="landmark" class="icon-yellow"></i>
+                            <h3>Credit Card Integration</h3>
+                            <p>Instant deposits and withdrawals using Credit Card system.</p>
+                        </div>
+                        <div class="feature-card">
+                            <i data-lucide="shield" class="icon-yellow"></i>
+                            <h3>Secure Platform</h3>
+                            <p>Bank-grade security protecting your assets 24/7.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How It Works -->
+            <section id="how-it-works" class="how-it-works-section">
+                <div class="container">
+                    <h2><span class="gradient-text">How It Works</span></h2>
+                    <div class="how-it-works-grid">
+                        <div class="steps">
+                            <div class="step">
+                                <div class="step-number">01</div>
+                                <div class="step-content">
+                                    <h3>Create Your Account</h3>
+                                    <p>Quick and easy registration process with minimal KYC requirements.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">02</div>
+                                <div class="step-content">
+                                    <h3>Deposit Funds</h3>
+                                    <p>Use Credit Card for instant deposits or transfer stablecoins directly.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">03</div>
+                                <div class="step-content">
+                                    <h3>Start Transfering</h3>
+                                    <p>Transfer between USDC, EURC, and make international payments.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="trading-card">
+                            <i data-lucide="arrow-down-up" class="icon-yellow"></i>
+                            <h3>Global Payments</h3>
+                            <p>Send and receive payments internationally with low fees, fast processing, and reliable access to stable currencies.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="cta-section">
+                <div class="container">
+                    <i data-lucide="globe" class="icon-yellow large"></i>
+                    <h2>Ready to Start Your <span class="gradient-text">PocketBlock Journey</span>?</h2>
+                    <button class="btn btn-primary large" onclick="window.location.href='{{ url_for('login') }}';">Create Account Now</button>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer>
+                <div class="container">
+                    <div class="footer-content">
+                        <div class="logo">
+                            <i data-lucide="coins" class="icon-yellow"></i>
+                            <span class="logo-text">PocketBlock</span>
+                        </div>
+                        <div class="footer-links">
+                            <a onclick="window.location.href='{{ url_for('login') }}';">Terms</a>
+                            <a onclick="window.location.href='{{ url_for('login') }}';">Privacy</a>
+                            <a onclick="window.location.href='{{ url_for('faq') }}';">Support</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <script>
+            lucide.createIcons();
+        </script>
+    </body>
+</html>
